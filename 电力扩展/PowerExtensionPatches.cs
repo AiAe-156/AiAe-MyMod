@@ -1,4 +1,4 @@
-﻿﻿// ============================================================
+﻿// ============================================================
 // 模块: PowerExtensionPatches.cs
 // 描述: 电力扩展模组的 Harmony 补丁集合
 //       包含中压导线(8kW)、空气燃料电源、离子电池列、
@@ -114,7 +114,7 @@ namespace PowerExtension
                 }
 
                 // 固体锌
-                Element zn = ElementLoader.GetElement("SolidZinc".ToTag());
+                Element zn = ElementLoader.FindElementByHash(SimHashes.Zinc);
                 if (zn != null)
                 {
                     var list = zn.oreTags.ToList();
@@ -397,10 +397,11 @@ namespace PowerExtension
             }
         }
 
-        // ======================== 重型智能电池：堆叠上限 15 层 ========================
+        // ======================== 重型智能电池：堆叠上限 15 层 + 地基校验 ========================
         // 建筑以顶部 (0,2) 连接点逐层向上堆叠，相邻两层锚点相差 (0,2)。
-        // 放置/建造校验时，从候选锚点向下逐层(步进 -2)统计已存在的同类电池，
-        // 达到 15 层则判定为非法放置并给出提示。
+        // 放置/建造校验时：
+        //   1. 从候选锚点向下逐层(步进 -2)统计已存在的同类电池，达到 15 层则拒绝；
+        //   2. 如果下方没有同类电池(即为底层)，检查 3 格宽地基是否为实心方块。
         // IsValidPlaceLocation(预览/下单) 与 IsValidBuildLocation 是两个独立入口，
         // 故两者都打 Postfix；任何异常都吞掉以免影响其他建筑放置。
         public static class StackBatteryLimit
@@ -413,6 +414,10 @@ namespace PowerExtension
                 if (def == null || def.PrefabID != StackBatteryConfig.ID) return;
                 try
                 {
+                    // 统计下方同类电池层数
+                    // 注意：Grid.Objects 在建筑占用的每个格子都返回该建筑，
+                    // 所以必须用 PosToCell 取锚点坐标与预期位置比对，
+                    // 防止空一格也被误判为"下方有电池"。
                     int below = cell;
                     int count = 0;
                     for (int i = 0; i < MAX_STACK + 2; i++)
@@ -423,12 +428,30 @@ namespace PowerExtension
                         if (go == null) break;
                         KPrefabID kp = go.GetComponent<KPrefabID>();
                         if (kp == null || kp.PrefabTag != (Tag)StackBatteryConfig.ID) break;
+                        int anchorCell = Grid.PosToCell(go.transform.GetPosition());
+                        if (anchorCell != below) break;
                         count++;
                     }
                     if (count >= MAX_STACK)
                     {
                         result = false;
                         fail_reason = PowerExtension.Strings.EXT_BUILDINGS.PREFABS.STACKBATTERY.STACK_LIMIT_MSG;
+                        return;
+                    }
+
+                    // 底层地基校验：下方无同类电池时，3 格宽底边必须有实心方块
+                    if (count == 0)
+                    {
+                        for (int x = 0; x < 3; x++)
+                        {
+                            int groundCell = Grid.OffsetCell(cell, x, -1);
+                            if (!Grid.IsValidCell(groundCell) || !Grid.Solid[groundCell])
+                            {
+                                result = false;
+                                fail_reason = UI.TOOLTIPS.HELP_BUILDLOCATION_FLOOR;
+                                return;
+                            }
+                        }
                     }
                 }
                 catch { }
@@ -529,22 +552,26 @@ namespace PowerExtension
 
                 Tag batteryTag = "AirBattery".ToTag();
                 Tag emptyBatteryTag = "EmptyAirBattery".ToTag();
-                Tag fullereneTag = SimHashes.Fullerene.CreateTag();
+                Tag graphiteTag = SimHashes.Graphite.CreateTag();
 
                 // 构建安全的金属数组
                 List<Tag> metalList = new List<Tag> {
                     SimHashes.Aluminum.CreateTag(),
                     SimHashes.Iron.CreateTag()      // [新增] 增加精炼铁
                     };
-                Tag zincTag = new Tag("SolidZinc");
-                if (ElementLoader.GetElement(zincTag) != null || Assets.GetPrefab(zincTag) != null)
+                Tag zincTag = SimHashes.Zinc.CreateTag();
+                if (ElementLoader.FindElementByHash(SimHashes.Zinc) != null)
                 {
                     metalList.Add(zincTag);
                 }
                 Tag[] validMetals = metalList.ToArray();
 
-                // 构建安全的塑料数组
+                // 构建安全的橡胶/塑料数组（与高压导线一致）
                 List<Tag> plasticList = new List<Tag> { SimHashes.Polypropylene.CreateTag() };
+                if (ElementLoader.FindElementByHash(SimHashes.Rubber) != null)
+                {
+                    plasticList.Add(SimHashes.Rubber.CreateTag());
+                }
                 Tag bioPlasticTag = new Tag("BioPlastic");
                 if (ElementLoader.GetElement(bioPlasticTag) != null || Assets.GetPrefab(bioPlasticTag) != null)
                 {
@@ -556,7 +583,7 @@ namespace PowerExtension
                 string recipeId1 = ComplexRecipeManager.MakeRecipeID(fabricatorId,
                     new ComplexRecipe.RecipeElement[] {
                         new ComplexRecipe.RecipeElement(validMetals, 600f),
-                        new ComplexRecipe.RecipeElement(fullereneTag, 10f),
+                        new ComplexRecipe.RecipeElement(graphiteTag, 10f),
                         new ComplexRecipe.RecipeElement(validPlastics, 50f)
                     },
                     new ComplexRecipe.RecipeElement[] { new ComplexRecipe.RecipeElement(batteryTag, 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature) });
@@ -566,7 +593,7 @@ namespace PowerExtension
                     new ComplexRecipe(recipeId1,
                         new ComplexRecipe.RecipeElement[] {
                             new ComplexRecipe.RecipeElement(validMetals, 600f),
-                            new ComplexRecipe.RecipeElement(fullereneTag, 10f),
+                            new ComplexRecipe.RecipeElement(graphiteTag, 10f),
                             new ComplexRecipe.RecipeElement(validPlastics, 50f)
                         },
                         new ComplexRecipe.RecipeElement[] { new ComplexRecipe.RecipeElement(batteryTag, 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature) })
@@ -579,12 +606,11 @@ namespace PowerExtension
                     };
                 }
 
-                // 注册"翻新电池"配方
+                // 注册"补充电池"配方
                 string recipeId2 = ComplexRecipeManager.MakeRecipeID(fabricatorId,
                     new ComplexRecipe.RecipeElement[] {
                         new ComplexRecipe.RecipeElement(emptyBatteryTag, 1f),
-                        new ComplexRecipe.RecipeElement(validMetals, 300f),
-                        new ComplexRecipe.RecipeElement(fullereneTag, 10f)
+                        new ComplexRecipe.RecipeElement(validMetals, 600f)
                     },
                     new ComplexRecipe.RecipeElement[] { new ComplexRecipe.RecipeElement(batteryTag, 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature) });
 
@@ -593,14 +619,14 @@ namespace PowerExtension
                     new ComplexRecipe(recipeId2,
                         new ComplexRecipe.RecipeElement[] {
                             new ComplexRecipe.RecipeElement(emptyBatteryTag, 1f),
-                            new ComplexRecipe.RecipeElement(validMetals, 300f),
-                            new ComplexRecipe.RecipeElement(fullereneTag, 10f)
+                            new ComplexRecipe.RecipeElement(validMetals, 600f)
                         },
                         new ComplexRecipe.RecipeElement[] { new ComplexRecipe.RecipeElement(batteryTag, 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature) })
                     {
                         time = 40f,
-                        description = "翻新并重新填充耗尽的空气燃料电源。",
-                        nameDisplay = ComplexRecipe.RecipeNameDisplay.Result,
+                        description = "补充耗尽的空气燃料电源。",
+                        nameDisplay = ComplexRecipe.RecipeNameDisplay.Custom,
+                        customName = "空气燃料电池(补充)",
                         fabricators = new List<Tag> { fabricatorId },
                         sortOrder = -998
                     };

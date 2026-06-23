@@ -1,4 +1,4 @@
-# ThirdParty HotFix U59
+﻿# ThirdParty HotFix U59
 
 `ThirdPartyHotFix_U59` 是一个用于《Oxygen Not Included》U59 版本的本地第三方模组兼容修复补丁。
 
@@ -64,7 +64,7 @@ True Tiles 的 `AddBlock` 崩溃发生在 True Tiles `OnLoad/PatchAll` 阶段。
 在源码目录执行：
 
 ```powershell
-dotnet build "e:\项目\缺氧\ThirdPartyHotFix_U59\ThirdPartyHotFix.csproj" -c Release
+dotnet build "e:\项目\缺氧\MyMod\ThirdPartyHotFix_U59\ThirdPartyHotFix.csproj" -c Release
 ```
 
 项目的 post-build 会自动复制：
@@ -125,9 +125,9 @@ TrueTiles.Patches.AssetsPatch+Assets_OnPrefabInit_Patch.Postfix
 
 本次 True Tiles 修复参考了以下归档：
 
-- `e:\项目\缺氧\Mods\反编译\TrueTiles_2815406414_2026-06-18`
-- `e:\项目\缺氧\Mods\反编译\Assembly-CSharp_ONI_2026-06-18_U59-737195`
+- `e:\项目\缺氧\MyMod\0.反编译\TrueTiles_2815406414_2026-06-18`
+- `e:\项目\缺氧\MyMod\0.反编译\Assembly-CSharp_ONI_2026-06-18_U59-737195`
 
 反编译索引：
 
-- `e:\项目\缺氧\Mods\反编译\索引.md`
+- `e:\项目\缺氧\MyMod\0.反编译\索引.md`

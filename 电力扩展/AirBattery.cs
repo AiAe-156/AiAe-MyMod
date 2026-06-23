@@ -11,7 +11,7 @@ public class AirBattery : Electrobank
     public float MaxCapacity => ModOptions.Instance.BatteryCapacity * 1000f;
 
     [Serialize]
-    public float customCharge = 1200000f;
+    public float customCharge = 720000f;
 
     [Serialize]
     private float customHealth = 10f;
@@ -27,7 +27,7 @@ public class AirBattery : Electrobank
     protected override void OnPrefabInit()
     {
         base.OnPrefabInit();
-        if (customCharge == 1200000f && MaxCapacity != 1200000f) customCharge = MaxCapacity;
+        if (customCharge == 720000f && MaxCapacity != 720000f) customCharge = MaxCapacity;
     }
 
     public float RemovePowerInternal(float joules, bool dropWhenEmpty)

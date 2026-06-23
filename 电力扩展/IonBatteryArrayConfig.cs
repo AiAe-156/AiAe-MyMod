@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using STRINGS;
 using TUNING;
 using UnityEngine;
@@ -21,7 +21,7 @@ namespace PowerExtension
 
             bool hasIO = ElementLoader.GetElement("AIO_HardenedAlloy".ToTag()) != null;
 
-            float[] construction_mass = new float[] { 1200f, 25f, 200f };
+            float[] construction_mass = new float[] { 1200f, 50f, 200f };
             string[] construction_materials = new string[] {
                 "PowerExt_IonMetal",
                 "Fullerene",
@@ -33,6 +33,8 @@ namespace PowerExtension
             float self_heat_kilowatts_active = 32f;
 
             BuildingDef def = base.CreateBuildingDef(ID, width, height, hitpoints, anim, construction_time, construction_mass, construction_materials, melting_point, exhaust_temperature_active, self_heat_kilowatts_active, TUNING.BUILDINGS.DECOR.PENALTY.TIER2, TUNING.NOISE_POLLUTION.NOISY.TIER2);
+
+            def.PermittedRotations = PermittedRotations.FlipH;
 
             def.Overheatable = true;
             def.OverheatTemperature = 273.15f + 75f;
