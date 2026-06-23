@@ -1,0 +1,3 @@
+title: ThirdParty HotFix (U59)
+description: "临时修复 U59 (Aquatic DLC Beta) 下两个第三方模组的异常风暴: 1) Unpatch Stairs PathProbeTask_Patch (跨线程 transform 访问); 2) 给 BetterInfoCards ExportGO 加 null-guard。"
+staticID: ThirdPartyHotFix_U59

@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>DirectIrrigationAdjacency</RootNamespace>
+    <AssemblyName>DirectIrrigationAdjacency</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <DebugType>none</DebugType>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <ManagedDir>F:\Games\SteamLibrary\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\</ManagedDir>
+    <ModDeployDir>C:\Users\AiAe\Documents\Klei\OxygenNotIncluded\mods\Local\DirectIrrigationAdjacency\</ModDeployDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(ManagedDir)0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ManagedDir)Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(ManagedDir)Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="PLib">
+      <HintPath>C:\Users\AiAe\Documents\Klei\OxygenNotIncluded\mods\Steam\1839645620\PLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="if not exist &quot;$(ModDeployDir)&quot; mkdir &quot;$(ModDeployDir)&quot;" />
+    <Exec Command="xcopy /Y /F &quot;$(TargetPath)&quot; &quot;$(ModDeployDir)&quot;" />
+    <Exec Command="xcopy /Y /F &quot;$(ProjectDir)mod.yaml&quot; &quot;$(ModDeployDir)&quot;" />
+    <Exec Command="xcopy /Y /F &quot;$(ProjectDir)DirectIrrigationAdjacency.json&quot; &quot;$(ModDeployDir)&quot;" />
+    <Exec Command="xcopy /Y /F &quot;$(ProjectDir)mod_info.yaml&quot; &quot;$(ModDeployDir)&quot;" />
+  </Target>
+</Project>

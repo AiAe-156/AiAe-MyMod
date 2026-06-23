@@ -1,0 +1,1093 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
+using KSerialization;
+using STRINGS;
+using TUNING;
+using UnityEngine;
+
+public class Clustercraft : ClusterGridEntity, IClusterRange, ISim4000ms, ISim1000ms
+{
+	public enum CraftStatus
+	{
+		Grounded,
+		Launching,
+		InFlight,
+		Landing
+	}
+
+	public enum CombustionResource
+	{
+		Fuel,
+		Oxidizer,
+		All
+	}
+
+	public enum PadLandingStatus
+	{
+		CanLandImmediately,
+		CanLandEventually,
+		CanNeverLand
+	}
+
+	[Serialize]
+	private string m_name;
+
+	private bool wasFlying = false;
+
+	public float LastTimeFlightBegan;
+
+	public float LastTimeFlightStopped;
+
+	[MyCmpReq]
+	private ClusterTraveler m_clusterTraveler;
+
+	[MyCmpReq]
+	private CraftModuleInterface m_moduleInterface;
+
+	private Guid mainStatusHandle;
+
+	private Guid cargoStatusHandle;
+
+	private Guid missionControlStatusHandle = Guid.Empty;
+
+	public static Dictionary<Tag, float> dlc1OxidizerEfficiencies = new Dictionary<Tag, float>
+	{
+		{
+			SimHashes.OxyRock.CreateTag(),
+			ROCKETRY.DLC1_OXIDIZER_EFFICIENCY.LOW
+		},
+		{
+			SimHashes.LiquidOxygen.CreateTag(),
+			ROCKETRY.DLC1_OXIDIZER_EFFICIENCY.HIGH
+		},
+		{
+			SimHashes.Fertilizer.CreateTag(),
+			ROCKETRY.DLC1_OXIDIZER_EFFICIENCY.VERY_LOW
+		}
+	};
+
+	[Serialize]
+	[Range(0f, 1f)]
+	public float AutoPilotMultiplier = 1f;
+
+	[Serialize]
+	[Range(0f, 2f)]
+	public float PilotSkillMultiplier = 1f;
+
+	[Serialize]
+	public float controlStationBuffTimeRemaining = 0f;
+
+	[Serialize]
+	private bool m_launchRequested;
+
+	[Serialize]
+	private CraftStatus status;
+
+	[MyCmpGet]
+	private KSelectable selectable;
+
+	private static EventSystem.IntraObjectHandler<Clustercraft> RocketModuleChangedHandler = new EventSystem.IntraObjectHandler<Clustercraft>(delegate(Clustercraft cmp, object data)
+	{
+		cmp.RocketModuleChanged(data);
+	});
+
+	private static EventSystem.IntraObjectHandler<Clustercraft> ClusterDestinationChangedHandler = new EventSystem.IntraObjectHandler<Clustercraft>(delegate(Clustercraft cmp, object data)
+	{
+		cmp.OnClusterDestinationChanged(data);
+	});
+
+	private static EventSystem.IntraObjectHandler<Clustercraft> ClusterDestinationReachedHandler = new EventSystem.IntraObjectHandler<Clustercraft>(delegate(Clustercraft cmp, object data)
+	{
+		cmp.OnClusterDestinationReached(data);
+	});
+
+	private static EventSystem.IntraObjectHandler<Clustercraft> NameChangedHandler = new EventSystem.IntraObjectHandler<Clustercraft>(delegate(Clustercraft cmp, object data)
+	{
+		cmp.SetRocketName(data);
+	});
+
+	public override string Name => m_name;
+
+	public bool Exploding { get; protected set; }
+
+	public override EntityLayer Layer => EntityLayer.Craft;
+
+	public override List<AnimConfig> AnimConfigs => new List<AnimConfig>
+	{
+		new AnimConfig
+		{
+			animFile = Assets.GetAnim("rocket01_kanim"),
+			initialAnim = "idle_loop"
+		}
+	};
+
+	public override bool IsVisible => !Exploding;
+
+	public override ClusterRevealLevel IsVisibleInFOW => ClusterRevealLevel.Visible;
+
+	public CraftModuleInterface ModuleInterface => m_moduleInterface;
+
+	public AxialI Destination => m_moduleInterface.GetClusterDestinationSelector().GetDestination();
+
+	public float Speed
+	{
+		get
+		{
+			float num = EnginePower / TotalBurden;
+			float num2 = num * PilotSkillMultiplier;
+			bool flag = AutoPilotMultiplier > 0.5f;
+			bool flag2 = ModuleInterface.GetPassengerModule() != null;
+			RoboPilotModule robotPilotModule = ModuleInterface.GetRobotPilotModule();
+			bool flag3 = robotPilotModule != null && robotPilotModule.GetDataBanksStored() > 1f;
+			if (flag3 && flag)
+			{
+				num2 *= 1.5f;
+			}
+			else if (!flag && flag2)
+			{
+				num2 *= 0.5f;
+			}
+			else if (!flag3 && !flag2)
+			{
+				num2 = 0f;
+			}
+			if (controlStationBuffTimeRemaining > 0f)
+			{
+				num2 += num * 0.20000005f;
+			}
+			return num2;
+		}
+	}
+
+	public float EnginePower
+	{
+		get
+		{
+			float num = 0f;
+			foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+			{
+				num += clusterModule.Get().performanceStats.EnginePower;
+			}
+			return num;
+		}
+	}
+
+	public float FuelPerDistance
+	{
+		get
+		{
+			float num = 0f;
+			foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+			{
+				num += clusterModule.Get().performanceStats.FuelKilogramPerDistance;
+			}
+			return num;
+		}
+	}
+
+	public float TotalBurden
+	{
+		get
+		{
+			float num = 0f;
+			foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+			{
+				num += clusterModule.Get().performanceStats.Burden;
+			}
+			Debug.Assert(num > 0f);
+			return num;
+		}
+	}
+
+	public bool LaunchRequested
+	{
+		get
+		{
+			return m_launchRequested;
+		}
+		private set
+		{
+			m_launchRequested = value;
+			m_moduleInterface.TriggerEventOnCraftAndRocket(GameHashes.RocketRequestLaunch, this);
+		}
+	}
+
+	public CraftStatus Status => status;
+
+	public override Sprite GetUISprite()
+	{
+		PassengerRocketModule passengerModule = m_moduleInterface.GetPassengerModule();
+		if (passengerModule != null)
+		{
+			return Def.GetUISprite(passengerModule.gameObject).first;
+		}
+		return Assets.GetSprite("ic_rocket");
+	}
+
+	public override bool SpaceOutInSameHex()
+	{
+		return true;
+	}
+
+	public void SetCraftStatus(CraftStatus craft_status)
+	{
+		status = craft_status;
+		UpdateGroundTags();
+		m_moduleInterface.TriggerEventOnCraftAndRocket(GameHashes.ClustercraftStateChanged, craft_status);
+	}
+
+	public void SetExploding()
+	{
+		Exploding = true;
+	}
+
+	protected override void OnPrefabInit()
+	{
+		base.OnPrefabInit();
+		Components.Clustercrafts.Add(this);
+	}
+
+	protected override void OnSpawn()
+	{
+		base.OnSpawn();
+		m_clusterTraveler.getSpeedCB = GetSpeed;
+		m_clusterTraveler.getCanTravelCB = CanTravel;
+		m_clusterTraveler.onTravelCB = BurnFuelForTravel;
+		m_clusterTraveler.validateTravelCB = CanTravelToCell;
+		UpdateGroundTags();
+		Subscribe(1512695988, RocketModuleChangedHandler);
+		Subscribe(543433792, ClusterDestinationChangedHandler);
+		Subscribe(1796608350, ClusterDestinationReachedHandler);
+		Subscribe(-688990705, delegate
+		{
+			UpdateStatusItem();
+		});
+		Subscribe(1102426921, NameChangedHandler);
+		SetRocketName(m_name);
+		UpdateStatusItem();
+		RefreshStarBackgroundVariables();
+	}
+
+	public void Sim1000ms(float dt)
+	{
+		controlStationBuffTimeRemaining = Mathf.Max(controlStationBuffTimeRemaining - dt, 0f);
+		if (controlStationBuffTimeRemaining > 0f)
+		{
+			missionControlStatusHandle = selectable.AddStatusItem(Db.Get().BuildingStatusItems.MissionControlBoosted, this);
+			return;
+		}
+		selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.MissionControlBoosted);
+		missionControlStatusHandle = Guid.Empty;
+	}
+
+	public void Sim4000ms(float dt)
+	{
+		RocketClusterDestinationSelector clusterDestinationSelector = m_moduleInterface.GetClusterDestinationSelector();
+		if (Status == CraftStatus.InFlight && m_location == clusterDestinationSelector.GetDestination())
+		{
+			OnClusterDestinationReached(null);
+		}
+	}
+
+	public void Init(AxialI location, LaunchPad pad)
+	{
+		m_location = location;
+		RocketClusterDestinationSelector component = GetComponent<RocketClusterDestinationSelector>();
+		component.SetDestination(m_location);
+		SetRocketName(GameUtil.GenerateRandomRocketName());
+		if (pad != null)
+		{
+			Land(pad, forceGrounded: true);
+		}
+		UpdateStatusItem();
+	}
+
+	protected override void OnCleanUp()
+	{
+		Components.Clustercrafts.Remove(this);
+		base.OnCleanUp();
+	}
+
+	private bool CanTravel(bool tryingToLand)
+	{
+		return this.HasTag(GameTags.RocketInSpace) && (tryingToLand || HasResourcesToMove());
+	}
+
+	private bool CanTravelToCell(AxialI location)
+	{
+		ClusterGridEntity visibleEntityOfLayerAtCell = ClusterGrid.Instance.GetVisibleEntityOfLayerAtCell(location, EntityLayer.Asteroid);
+		if (visibleEntityOfLayerAtCell != null)
+		{
+			return CanLandAtAsteroid(location, mustLandImmediately: true);
+		}
+		return true;
+	}
+
+	private float GetSpeed()
+	{
+		return Speed;
+	}
+
+	private void RocketModuleChanged(object data)
+	{
+		RocketModuleCluster rocketModuleCluster = (RocketModuleCluster)data;
+		if (rocketModuleCluster != null)
+		{
+			UpdateGroundTags(rocketModuleCluster.gameObject);
+		}
+	}
+
+	private void OnClusterDestinationChanged(object _)
+	{
+		UpdateStatusItem();
+		RefreshStarBackgroundVariables();
+	}
+
+	private void OnClusterDestinationReached(object _)
+	{
+		RocketClusterDestinationSelector clusterDestinationSelector = m_moduleInterface.GetClusterDestinationSelector();
+		Debug.Assert(base.Location == clusterDestinationSelector.GetDestination());
+		if (clusterDestinationSelector.HasAsteroidDestination())
+		{
+			LaunchPad destinationPad = clusterDestinationSelector.GetDestinationPad();
+			Land(base.Location, destinationPad);
+		}
+		UpdateStatusItem();
+		RefreshStarBackgroundVariables();
+	}
+
+	public void SetRocketName(object newName)
+	{
+		SetRocketName((string)newName);
+	}
+
+	public void RefreshStarBackgroundVariables()
+	{
+		bool flag = IsFlightInProgress() && HasResourcesToMove();
+		if (wasFlying != flag)
+		{
+			if (flag)
+			{
+				LastTimeFlightBegan = Time.timeSinceLevelLoad;
+			}
+			else
+			{
+				LastTimeFlightStopped = Time.timeSinceLevelLoad;
+			}
+			wasFlying = flag;
+		}
+	}
+
+	public void SetRocketName(string newName)
+	{
+		m_name = newName;
+		base.name = "Clustercraft: " + newName;
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			CharacterOverlay component = clusterModule.Get().GetComponent<CharacterOverlay>();
+			if (component != null)
+			{
+				NameDisplayScreen.Instance.UpdateName(component.gameObject);
+				break;
+			}
+		}
+		ClusterManager.Instance.Trigger(1943181844, (object)newName);
+	}
+
+	public bool CheckPreppedForLaunch()
+	{
+		return m_moduleInterface.CheckPreppedForLaunch();
+	}
+
+	public bool CheckReadyToLaunch()
+	{
+		return m_moduleInterface.CheckReadyToLaunch();
+	}
+
+	public bool IsFlightInProgress()
+	{
+		return Status == CraftStatus.InFlight && m_clusterTraveler.IsTraveling();
+	}
+
+	public ClusterGridEntity GetPOIAtCurrentLocation()
+	{
+		if ((status != CraftStatus.InFlight || IsFlightInProgress()) && (status != CraftStatus.Launching || !(m_location == Destination)))
+		{
+			return null;
+		}
+		return ClusterGrid.Instance.GetVisibleEntityOfLayerAtCell(m_location, EntityLayer.POI);
+	}
+
+	public ClusterGridEntity GetStableOrbitAsteroid()
+	{
+		if (status != CraftStatus.InFlight || IsFlightInProgress())
+		{
+			return null;
+		}
+		return ClusterGrid.Instance.GetVisibleEntityOfLayerAtAdjacentCell(m_location, EntityLayer.Asteroid);
+	}
+
+	public ClusterGridEntity GetOrbitAsteroid()
+	{
+		if (status != CraftStatus.InFlight)
+		{
+			return null;
+		}
+		return ClusterGrid.Instance.GetVisibleEntityOfLayerAtAdjacentCell(m_location, EntityLayer.Asteroid);
+	}
+
+	public ClusterGridEntity GetAdjacentAsteroid()
+	{
+		return ClusterGrid.Instance.GetVisibleEntityOfLayerAtAdjacentCell(m_location, EntityLayer.Asteroid);
+	}
+
+	private bool CheckDesinationInRange()
+	{
+		return m_clusterTraveler.CurrentPath != null && Speed * m_clusterTraveler.TravelETA() <= ModuleInterface.Range;
+	}
+
+	public bool HasResourcesToMove(int hexes = 1, CombustionResource combustionResource = CombustionResource.All)
+	{
+		switch (combustionResource)
+		{
+		case CombustionResource.All:
+			return m_moduleInterface.BurnableMassRemaining / FuelPerDistance >= 600f * (float)hexes - 0.001f;
+		case CombustionResource.Fuel:
+			return m_moduleInterface.FuelRemaining / FuelPerDistance >= 600f * (float)hexes - 0.001f;
+		case CombustionResource.Oxidizer:
+			return m_moduleInterface.OxidizerPowerRemaining / FuelPerDistance >= 600f * (float)hexes - 0.001f;
+		default:
+		{
+			bool is_robo_pilot;
+			RocketModuleCluster primaryPilotModule = m_moduleInterface.GetPrimaryPilotModule(out is_robo_pilot);
+			if (is_robo_pilot)
+			{
+				return primaryPilotModule.GetComponent<RoboPilotModule>().HasResourcesToMove(hexes);
+			}
+			return false;
+		}
+		}
+	}
+
+	private void BurnFuelForTravel()
+	{
+		float num = 600f;
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			RocketModuleCluster rocketModuleCluster = clusterModule.Get();
+			RocketEngineCluster component = rocketModuleCluster.GetComponent<RocketEngineCluster>();
+			if (component != null)
+			{
+				Tag fuelTag = component.fuelTag;
+				float totalOxidizerRemaining = 0f;
+				if (component.requireOxidizer)
+				{
+					totalOxidizerRemaining = ModuleInterface.OxidizerPowerRemaining;
+				}
+				if (num > 0f)
+				{
+					foreach (Ref<RocketModuleCluster> clusterModule2 in m_moduleInterface.ClusterModules)
+					{
+						IFuelTank component2 = clusterModule2.Get().GetComponent<IFuelTank>();
+						if (!component2.IsNullOrDestroyed())
+						{
+							num -= BurnFromTank(num, component, fuelTag, component2.Storage, ref totalOxidizerRemaining);
+						}
+						if (num <= 0f)
+						{
+							break;
+						}
+					}
+				}
+			}
+			RoboPilotModule component3 = rocketModuleCluster.GetComponent<RoboPilotModule>();
+			if (component3 != null)
+			{
+				component3.ConsumeDataBanksInFlight();
+			}
+		}
+		UpdateStatusItem();
+	}
+
+	private float BurnFromTank(float attemptTravelAmount, RocketEngineCluster engine, Tag fuelTag, IStorage storage, ref float totalOxidizerRemaining)
+	{
+		float b = attemptTravelAmount * engine.GetComponent<RocketModuleCluster>().performanceStats.FuelKilogramPerDistance;
+		b = Mathf.Min(storage.GetAmountAvailable(fuelTag), b);
+		if (engine.requireOxidizer)
+		{
+			b = Mathf.Min(b, totalOxidizerRemaining);
+		}
+		storage.ConsumeIgnoringDisease(fuelTag, b);
+		if (engine.requireOxidizer)
+		{
+			BurnOxidizer(b);
+			totalOxidizerRemaining -= b;
+		}
+		return b / engine.GetComponent<RocketModuleCluster>().performanceStats.FuelKilogramPerDistance;
+	}
+
+	private void BurnOxidizer(float fuelEquivalentKGs)
+	{
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			OxidizerTank component = clusterModule.Get().GetComponent<OxidizerTank>();
+			if (component != null)
+			{
+				foreach (KeyValuePair<Tag, float> item in component.GetOxidizersAvailable())
+				{
+					float num = dlc1OxidizerEfficiencies[item.Key];
+					float a = fuelEquivalentKGs / num;
+					float num2 = Mathf.Min(a, item.Value);
+					if (num2 > 0f)
+					{
+						component.storage.ConsumeIgnoringDisease(item.Key, num2);
+						fuelEquivalentKGs -= num2 * num;
+					}
+				}
+			}
+			if (fuelEquivalentKGs <= 0f)
+			{
+				break;
+			}
+		}
+	}
+
+	public List<ResourceHarvestModule.StatesInstance> GetAllResourceHarvestModules()
+	{
+		List<ResourceHarvestModule.StatesInstance> list = new List<ResourceHarvestModule.StatesInstance>();
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			ResourceHarvestModule.StatesInstance sMI = clusterModule.Get().GetSMI<ResourceHarvestModule.StatesInstance>();
+			if (sMI != null)
+			{
+				list.Add(sMI);
+			}
+		}
+		return list;
+	}
+
+	public List<ArtifactHarvestModule.StatesInstance> GetAllArtifactHarvestModules()
+	{
+		List<ArtifactHarvestModule.StatesInstance> list = new List<ArtifactHarvestModule.StatesInstance>();
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			ArtifactHarvestModule.StatesInstance sMI = clusterModule.Get().GetSMI<ArtifactHarvestModule.StatesInstance>();
+			if (sMI != null)
+			{
+				list.Add(sMI);
+			}
+		}
+		return list;
+	}
+
+	public List<RocketModuleHexCellCollector.Instance> GetAllHexCellCollectorModules()
+	{
+		List<RocketModuleHexCellCollector.Instance> list = new List<RocketModuleHexCellCollector.Instance>();
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			RocketModuleHexCellCollector.Instance sMI = clusterModule.Get().GetSMI<RocketModuleHexCellCollector.Instance>();
+			if (sMI != null)
+			{
+				list.Add(sMI);
+			}
+		}
+		return list;
+	}
+
+	public List<CargoBayCluster> GetAllCargoBays()
+	{
+		List<CargoBayCluster> list = new List<CargoBayCluster>();
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			CargoBayCluster component = clusterModule.Get().GetComponent<CargoBayCluster>();
+			if (component != null)
+			{
+				list.Add(component);
+			}
+		}
+		return list;
+	}
+
+	public List<CargoBayCluster> GetCargoBaysOfType(CargoBay.CargoType cargoType)
+	{
+		List<CargoBayCluster> list = new List<CargoBayCluster>();
+		foreach (Ref<RocketModuleCluster> clusterModule in m_moduleInterface.ClusterModules)
+		{
+			CargoBayCluster component = clusterModule.Get().GetComponent<CargoBayCluster>();
+			if (component != null && component.storageType == cargoType)
+			{
+				list.Add(component);
+			}
+		}
+		return list;
+	}
+
+	public void DestroyCraftAndModules()
+	{
+		WorldContainer interiorWorld = m_moduleInterface.GetInteriorWorld();
+		if (interiorWorld != null)
+		{
+			NameDisplayScreen.Instance.RemoveWorldEntries(interiorWorld.id);
+		}
+		List<RocketModuleCluster> list = m_moduleInterface.ClusterModules.Select((Ref<RocketModuleCluster> x) => x.Get()).ToList();
+		for (int num = list.Count - 1; num >= 0; num--)
+		{
+			RocketModuleCluster rocketModuleCluster = list[num];
+			Storage component = rocketModuleCluster.GetComponent<Storage>();
+			if (component != null)
+			{
+				component.ConsumeAllIgnoringDisease();
+			}
+			MinionStorage component2 = rocketModuleCluster.GetComponent<MinionStorage>();
+			if (component2 != null)
+			{
+				List<MinionStorage.Info> storedMinionInfo = component2.GetStoredMinionInfo();
+				for (int num2 = storedMinionInfo.Count - 1; num2 >= 0; num2--)
+				{
+					component2.DeleteStoredMinion(storedMinionInfo[num2].id);
+				}
+			}
+			Util.KDestroyGameObject(rocketModuleCluster.gameObject);
+		}
+		Util.KDestroyGameObject(base.gameObject);
+	}
+
+	public void CancelLaunch()
+	{
+		if (LaunchRequested)
+		{
+			Debug.Log("Cancelling launch!");
+			LaunchRequested = false;
+		}
+	}
+
+	public void RequestLaunch(bool automated = false)
+	{
+		if (this.HasTag(GameTags.RocketNotOnGround) || m_moduleInterface.GetClusterDestinationSelector().IsAtDestination())
+		{
+			return;
+		}
+		if (DebugHandler.InstantBuildMode && !automated)
+		{
+			Launch();
+		}
+		if (!LaunchRequested && CheckPreppedForLaunch())
+		{
+			Debug.Log("Triggering launch!");
+			if (m_moduleInterface.GetRobotPilotModule() != null)
+			{
+				Launch(automated);
+			}
+			LaunchRequested = true;
+		}
+	}
+
+	public void Launch(bool automated = false)
+	{
+		if (this.HasTag(GameTags.RocketNotOnGround) || m_moduleInterface.GetClusterDestinationSelector().IsAtDestination())
+		{
+			LaunchRequested = false;
+		}
+		else if ((DebugHandler.InstantBuildMode && !automated) || CheckReadyToLaunch())
+		{
+			if (automated && !m_moduleInterface.CheckReadyForAutomatedLaunchCommand())
+			{
+				LaunchRequested = false;
+				return;
+			}
+			LaunchRequested = false;
+			SetCraftStatus(CraftStatus.Launching);
+			m_moduleInterface.DoLaunch();
+			BurnFuelForTravel();
+			m_clusterTraveler.AdvancePathOneStep();
+			UpdateStatusItem();
+		}
+	}
+
+	public void LandAtPad(LaunchPad pad)
+	{
+		m_moduleInterface.GetClusterDestinationSelector().SetDestinationPad(pad);
+	}
+
+	public PadLandingStatus CanLandAtPad(LaunchPad pad, out string failReason)
+	{
+		if (pad == null)
+		{
+			failReason = UI.UISIDESCREENS.CLUSTERDESTINATIONSIDESCREEN.NONEAVAILABLE;
+			return PadLandingStatus.CanNeverLand;
+		}
+		if (pad.HasRocket() && pad.LandedRocket.CraftInterface != m_moduleInterface)
+		{
+			failReason = "<TEMP>The pad already has a rocket on it!<TEMP>";
+			return PadLandingStatus.CanLandEventually;
+		}
+		int num = ConditionFlightPathIsClear.PadTopEdgeDistanceToCeilingEdge(pad.gameObject);
+		if (num < ModuleInterface.RocketHeight)
+		{
+			failReason = UI.UISIDESCREENS.CLUSTERDESTINATIONSIDESCREEN.DROPDOWN_TOOLTIP_TOO_SHORT;
+			return PadLandingStatus.CanNeverLand;
+		}
+		int obstruction = -1;
+		if (!ConditionFlightPathIsClear.CheckFlightPathClear(ModuleInterface, pad.gameObject, out obstruction))
+		{
+			failReason = string.Format(UI.UISIDESCREENS.CLUSTERDESTINATIONSIDESCREEN.DROPDOWN_TOOLTIP_PATH_OBSTRUCTED, pad.GetProperName());
+			return PadLandingStatus.CanNeverLand;
+		}
+		if (!pad.GetComponent<Operational>().IsOperational)
+		{
+			failReason = UI.UISIDESCREENS.CLUSTERDESTINATIONSIDESCREEN.DROPDOWN_TOOLTIP_PAD_DISABLED;
+			return PadLandingStatus.CanNeverLand;
+		}
+		int rocketBottomPosition = pad.RocketBottomPosition;
+		foreach (Ref<RocketModuleCluster> clusterModule in ModuleInterface.ClusterModules)
+		{
+			RocketModuleCluster rocketModuleCluster = clusterModule.Get();
+			GameObject gameObject = rocketModuleCluster.gameObject;
+			int moduleRelativeVerticalPosition = ModuleInterface.GetModuleRelativeVerticalPosition(gameObject);
+			Building component = gameObject.GetComponent<Building>();
+			BuildingUnderConstruction component2 = gameObject.GetComponent<BuildingUnderConstruction>();
+			BuildingDef buildingDef = ((component != null) ? component.Def : component2.Def);
+			for (int i = 0; i < buildingDef.WidthInCells; i++)
+			{
+				for (int j = 0; j < buildingDef.HeightInCells; j++)
+				{
+					int cell = Grid.OffsetCell(rocketBottomPosition, 0, moduleRelativeVerticalPosition);
+					cell = Grid.OffsetCell(cell, -(buildingDef.WidthInCells / 2) + i, j);
+					if (Grid.Solid[cell])
+					{
+						obstruction = cell;
+						failReason = string.Format(UI.UISIDESCREENS.CLUSTERDESTINATIONSIDESCREEN.DROPDOWN_TOOLTIP_SITE_OBSTRUCTED, pad.GetProperName());
+						return PadLandingStatus.CanNeverLand;
+					}
+				}
+			}
+		}
+		failReason = null;
+		return PadLandingStatus.CanLandImmediately;
+	}
+
+	private LaunchPad FindValidLandingPad(AxialI location, bool mustLandImmediately)
+	{
+		LaunchPad result = null;
+		int asteroidWorldIdAtLocation = ClusterUtil.GetAsteroidWorldIdAtLocation(location);
+		LaunchPad preferredLaunchPadForWorld = m_moduleInterface.GetPreferredLaunchPadForWorld(asteroidWorldIdAtLocation);
+		if (preferredLaunchPadForWorld != null && CanLandAtPad(preferredLaunchPadForWorld, out var _) == PadLandingStatus.CanLandImmediately)
+		{
+			return preferredLaunchPadForWorld;
+		}
+		foreach (LaunchPad launchPad in Components.LaunchPads)
+		{
+			if (launchPad.GetMyWorldLocation() == location)
+			{
+				string failReason2;
+				PadLandingStatus padLandingStatus = CanLandAtPad(launchPad, out failReason2);
+				if (padLandingStatus == PadLandingStatus.CanLandImmediately)
+				{
+					return launchPad;
+				}
+				if (!mustLandImmediately && padLandingStatus == PadLandingStatus.CanLandEventually)
+				{
+					result = launchPad;
+				}
+			}
+		}
+		return result;
+	}
+
+	public bool CanLandAtAsteroid(AxialI location, bool mustLandImmediately)
+	{
+		LaunchPad destinationPad = m_moduleInterface.GetClusterDestinationSelector().GetDestinationPad();
+		Debug.Assert(destinationPad == null || destinationPad.GetMyWorldLocation() == location, "A rocket is trying to travel to an asteroid but has selected a landing pad at a different asteroid!");
+		if (destinationPad != null)
+		{
+			string failReason;
+			PadLandingStatus padLandingStatus = CanLandAtPad(destinationPad, out failReason);
+			return padLandingStatus == PadLandingStatus.CanLandImmediately || (!mustLandImmediately && padLandingStatus == PadLandingStatus.CanLandEventually);
+		}
+		return FindValidLandingPad(location, mustLandImmediately) != null;
+	}
+
+	private void Land(LaunchPad pad, bool forceGrounded)
+	{
+		if (CanLandAtPad(pad, out var _) == PadLandingStatus.CanLandImmediately)
+		{
+			BurnFuelForTravel();
+			m_location = pad.GetMyWorldLocation();
+			SetCraftStatus((!forceGrounded) ? CraftStatus.Landing : CraftStatus.Grounded);
+			m_moduleInterface.DoLand(pad);
+			UpdateStatusItem();
+		}
+	}
+
+	private void Land(AxialI destination, LaunchPad chosenPad)
+	{
+		if (chosenPad == null)
+		{
+			chosenPad = FindValidLandingPad(destination, mustLandImmediately: true);
+		}
+		Debug.Assert(chosenPad == null || chosenPad.GetMyWorldLocation() == m_location, "Attempting to land on a pad that isn't at our current position");
+		Land(chosenPad, forceGrounded: false);
+	}
+
+	public void UpdateStatusItem()
+	{
+		if (ClusterGrid.Instance == null)
+		{
+			return;
+		}
+		if (mainStatusHandle != Guid.Empty)
+		{
+			selectable.RemoveStatusItem(mainStatusHandle);
+		}
+		ClusterGridEntity visibleEntityOfLayerAtCell = ClusterGrid.Instance.GetVisibleEntityOfLayerAtCell(m_location, EntityLayer.Asteroid);
+		ClusterGridEntity orbitAsteroid = GetOrbitAsteroid();
+		bool flag = false;
+		if (orbitAsteroid != null)
+		{
+			foreach (LaunchPad launchPad in Components.LaunchPads)
+			{
+				if (launchPad.GetMyWorldLocation() == orbitAsteroid.Location)
+				{
+					flag = true;
+					break;
+				}
+			}
+		}
+		bool set = false;
+		if (visibleEntityOfLayerAtCell != null)
+		{
+			mainStatusHandle = selectable.SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().BuildingStatusItems.InFlight, m_clusterTraveler);
+		}
+		else if (!HasResourcesToMove() && !flag)
+		{
+			set = true;
+			mainStatusHandle = selectable.SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().BuildingStatusItems.RocketStranded, orbitAsteroid);
+		}
+		else if (!m_moduleInterface.GetClusterDestinationSelector().IsAtDestination() && !CheckDesinationInRange())
+		{
+			mainStatusHandle = selectable.SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().BuildingStatusItems.DestinationOutOfRange, m_clusterTraveler);
+		}
+		else if (orbitAsteroid != null && Destination == orbitAsteroid.Location)
+		{
+			mainStatusHandle = selectable.SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().BuildingStatusItems.WaitingToLand, orbitAsteroid);
+		}
+		else if (IsFlightInProgress() || Status == CraftStatus.Launching)
+		{
+			mainStatusHandle = selectable.SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().BuildingStatusItems.InFlight, m_clusterTraveler);
+		}
+		else if (orbitAsteroid != null)
+		{
+			mainStatusHandle = selectable.SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().BuildingStatusItems.InOrbit, orbitAsteroid);
+		}
+		else
+		{
+			mainStatusHandle = selectable.SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().BuildingStatusItems.Normal);
+		}
+		GetComponent<KPrefabID>().SetTag(GameTags.RocketStranded, set);
+		float num = 0f;
+		float num2 = 0f;
+		foreach (CargoBayCluster allCargoBay in GetAllCargoBays())
+		{
+			num += allCargoBay.MaxCapacity;
+			num2 += allCargoBay.RemainingCapacity;
+		}
+		if (Status != CraftStatus.Grounded && num > 0f)
+		{
+			if (num2 == 0f)
+			{
+				selectable.AddStatusItem(Db.Get().BuildingStatusItems.FlightAllCargoFull);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.FlightCargoRemaining);
+			}
+			else
+			{
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.FlightAllCargoFull);
+				if (cargoStatusHandle == Guid.Empty)
+				{
+					cargoStatusHandle = selectable.AddStatusItem(Db.Get().BuildingStatusItems.FlightCargoRemaining, num2);
+				}
+				else
+				{
+					selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.FlightCargoRemaining, immediate: true);
+					cargoStatusHandle = selectable.AddStatusItem(Db.Get().BuildingStatusItems.FlightCargoRemaining, num2);
+				}
+			}
+		}
+		else
+		{
+			selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.FlightCargoRemaining);
+			selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.FlightAllCargoFull);
+		}
+		UpdatePilotedStatusItems();
+	}
+
+	private void UpdateGroundTags()
+	{
+		foreach (Ref<RocketModuleCluster> clusterModule in ModuleInterface.ClusterModules)
+		{
+			if (clusterModule != null && !(clusterModule.Get() == null))
+			{
+				UpdateGroundTags(clusterModule.Get().gameObject);
+			}
+		}
+		UpdateGroundTags(base.gameObject);
+	}
+
+	private void UpdateGroundTags(GameObject go)
+	{
+		SetTagOnGameObject(go, GameTags.RocketOnGround, status == CraftStatus.Grounded);
+		SetTagOnGameObject(go, GameTags.RocketNotOnGround, status != CraftStatus.Grounded);
+		SetTagOnGameObject(go, GameTags.RocketInSpace, status == CraftStatus.InFlight);
+		SetTagOnGameObject(go, GameTags.EntityInSpace, status == CraftStatus.InFlight);
+	}
+
+	private void UpdatePilotedStatusItems()
+	{
+		if (Status != CraftStatus.Grounded)
+		{
+			bool dupe_piloted = false;
+			bool robo_piloted = false;
+			GetPilotedStatus(out dupe_piloted, out robo_piloted);
+			if (dupe_piloted && robo_piloted)
+			{
+				selectable.AddStatusItem(Db.Get().BuildingStatusItems.InFlightSuperPilot, this);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightUnpiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightAutoPiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightPiloted);
+			}
+			else if (dupe_piloted || robo_piloted)
+			{
+				selectable.AddStatusItem(Db.Get().BuildingStatusItems.InFlightPiloted, this);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightUnpiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightAutoPiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightSuperPilot);
+			}
+			else if (ModuleInterface.GetPassengerModule() != null)
+			{
+				selectable.AddStatusItem(Db.Get().BuildingStatusItems.InFlightAutoPiloted, this);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightUnpiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightPiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightSuperPilot);
+			}
+			else
+			{
+				selectable.AddStatusItem(Db.Get().BuildingStatusItems.InFlightUnpiloted, this);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightAutoPiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightPiloted);
+				selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightSuperPilot);
+			}
+		}
+		else
+		{
+			selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightUnpiloted);
+			selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightPiloted);
+			selectable.RemoveStatusItem(Db.Get().BuildingStatusItems.InFlightSuperPilot);
+		}
+	}
+
+	public void GetPilotedStatus(out bool dupe_piloted, out bool robo_piloted)
+	{
+		dupe_piloted = false;
+		robo_piloted = false;
+		PassengerRocketModule passengerModule = ModuleInterface.GetPassengerModule();
+		RoboPilotModule robotPilotModule = ModuleInterface.GetRobotPilotModule();
+		if (passengerModule != null)
+		{
+			dupe_piloted = AutoPilotMultiplier > 0.5f;
+		}
+		if (robotPilotModule != null)
+		{
+			robo_piloted = robotPilotModule.GetDataBanksStored() > 0f;
+		}
+	}
+
+	private void SetTagOnGameObject(GameObject go, Tag tag, bool set)
+	{
+		if (set)
+		{
+			go.AddTag(tag);
+		}
+		else
+		{
+			go.RemoveTag(tag);
+		}
+	}
+
+	public override bool ShowName()
+	{
+		return status != CraftStatus.Grounded;
+	}
+
+	public override bool ShowPath()
+	{
+		return status != CraftStatus.Grounded;
+	}
+
+	public bool IsTravellingAndFueled()
+	{
+		return HasResourcesToMove() && m_clusterTraveler.IsTraveling();
+	}
+
+	public override bool ShowProgressBar()
+	{
+		return IsTravellingAndFueled();
+	}
+
+	public override float GetProgress()
+	{
+		return m_clusterTraveler.GetMoveProgress();
+	}
+
+	[OnDeserialized]
+	private void OnDeserialized()
+	{
+		if (Status == CraftStatus.Grounded || !SaveLoader.Instance.GameInfo.IsVersionOlderThan(7, 27))
+		{
+			return;
+		}
+		UIScheduler.Instance.ScheduleNextFrame("Check Fuel Costs", delegate
+		{
+			foreach (Ref<RocketModuleCluster> clusterModule in ModuleInterface.ClusterModules)
+			{
+				RocketModuleCluster rocketModuleCluster = clusterModule.Get();
+				IFuelTank component = rocketModuleCluster.GetComponent<IFuelTank>();
+				if (component != null && !component.Storage.IsEmpty())
+				{
+					component.DEBUG_FillTank();
+				}
+				OxidizerTank component2 = rocketModuleCluster.GetComponent<OxidizerTank>();
+				if (component2 != null)
+				{
+					Dictionary<Tag, float> oxidizersAvailable = component2.GetOxidizersAvailable();
+					if (oxidizersAvailable.Count > 0)
+					{
+						foreach (KeyValuePair<Tag, float> item in oxidizersAvailable)
+						{
+							if (item.Value > 0f)
+							{
+								component2.DEBUG_FillTank(ElementLoader.GetElementID(item.Key));
+								break;
+							}
+						}
+					}
+				}
+			}
+		});
+	}
+
+	public float GetRange()
+	{
+		return ModuleInterface.Range;
+	}
+
+	public int GetRangeInTiles()
+	{
+		return ModuleInterface.RangeInTiles;
+	}
+
+	public int GetMaxRangeInTiles()
+	{
+		return ModuleInterface.MaxRange;
+	}
+}

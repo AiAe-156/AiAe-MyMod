@@ -1,0 +1,34 @@
+using STRINGS;
+using TUNING;
+using UnityEngine;
+
+public class SmokedVegetablesConfig : IEntityConfig, IHasDlcRestrictions
+{
+	public const string ID = "SmokedVegetables";
+
+	public static ComplexRecipe recipe;
+
+	public string[] GetRequiredDlcIds()
+	{
+		return DlcManager.DLC4;
+	}
+
+	public string[] GetForbiddenDlcIds()
+	{
+		return null;
+	}
+
+	public GameObject CreatePrefab()
+	{
+		GameObject template = EntityTemplates.CreateLooseEntity("SmokedVegetables", STRINGS.ITEMS.FOOD.SMOKEDVEGETABLES.NAME, STRINGS.ITEMS.FOOD.SMOKEDVEGETABLES.DESC, 1f, unitMass: false, Assets.GetAnim("smokedvegetables_kanim"), "object", Grid.SceneLayer.Front, EntityTemplates.CollisionShape.RECTANGLE, 0.8f, 0.7f, isPickupable: true);
+		return EntityTemplates.ExtendEntityToFood(template, FOOD.FOOD_TYPES.SMOKED_VEGETABLES);
+	}
+
+	public void OnPrefabInit(GameObject inst)
+	{
+	}
+
+	public void OnSpawn(GameObject inst)
+	{
+	}
+}

@@ -1,0 +1,71 @@
+<spriter_data scml_version="1.0" generator="kanimAL" generator_version="v1">
+  <folder id="0">
+    <file id="0" name="electrobank_l_destroyed_0.png" width="61" height="80" pivot_x="0.51535046" pivot_y="0.49631023" />
+    <file id="1" name="electrobank_s_0.png" width="48" height="76" pivot_x="0.5002604" pivot_y="0.50928855" />
+    <file id="2" name="electrobank_s_1.png" width="59" height="79" pivot_x="0.5102948" pivot_y="0.49245352" />
+    <file id="3" name="shadow_0.png" width="81" height="21" pivot_x="0.4998466" pivot_y="0.1988095" />
+    <file id="4" name="ui_0.png" width="76" height="101" pivot_x="0.50781757" pivot_y="0.055487573" />
+  </folder>
+  <entity id="0" name="electrobank_huge_destroyed">
+    <animation id="0" name="idle1" length="132" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+        <key id="1" time="33">
+          <object_ref id="0" timeline="0" key="1" z_index="1" />
+        </key>
+        <key id="2" time="66">
+          <object_ref id="0" timeline="0" key="2" z_index="1" />
+        </key>
+        <key id="3" time="99">
+          <object_ref id="0" timeline="0" key="3" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electrobank_l_destroyed_0">
+        <key id="0" time="0">
+          <object folder="0" file="0" x="-0.6000000238418579" y="-3.450000047683716" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="1" time="33">
+          <object folder="0" file="0" x="-0.6000000238418579" y="-3.450000047683716" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="2" time="66">
+          <object folder="0" file="0" x="-0.6000000238418579" y="-3.450000047683716" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="3" time="99">
+          <object folder="0" file="0" x="-0.6000000238418579" y="-3.450000047683716" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="1" name="ui" length="132" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+        <key id="1" time="33">
+          <object_ref id="0" timeline="0" key="1" z_index="1" />
+        </key>
+        <key id="2" time="66">
+          <object_ref id="0" timeline="0" key="2" z_index="1" />
+        </key>
+        <key id="3" time="99">
+          <object_ref id="0" timeline="0" key="3" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="ui_0">
+        <key id="0" time="0">
+          <object folder="0" file="4" x="-0.25" y="2.0999999046325684" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="1" time="33">
+          <object folder="0" file="4" x="-0.25" y="2.0999999046325684" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="2" time="66">
+          <object folder="0" file="4" x="-0.25" y="2.0999999046325684" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="3" time="99">
+          <object folder="0" file="4" x="-0.25" y="2.0999999046325684" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+  </entity>
+</spriter_data>

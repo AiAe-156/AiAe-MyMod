@@ -1,0 +1,630 @@
+<spriter_data scml_version="1.0" generator="kanimAL" generator_version="v1">
+  <folder id="0">
+    <file id="0" name="electric_0.png" width="222" height="222" pivot_x="0.5001126" pivot_y="0.5054054" />
+    <file id="1" name="electric_1.png" width="224" height="160" pivot_x="0.49776787" pivot_y="0.7110938" />
+    <file id="2" name="electric_2.png" width="159" height="163" pivot_x="0.70094335" pivot_y="0.6851227" />
+    <file id="3" name="electric_3.png" width="224" height="69" pivot_x="0.5011161" pivot_y="0.5152174" />
+    <file id="4" name="electric_4.png" width="155" height="105" pivot_x="0.7174193" pivot_y="0.5232889" />
+    <file id="5" name="electric_5.png" width="90" height="105" pivot_x="0.5138889" pivot_y="0.527619" />
+    <file id="6" name="electric_6.png" width="153" height="75" pivot_x="0.7390523" pivot_y="0.549" />
+    <file id="7" name="electric_place_0.png" width="221" height="222" pivot_x="0.49943438" pivot_y="0.5054054" />
+    <file id="8" name="electric_place_1.png" width="224" height="160" pivot_x="0.49776787" pivot_y="0.7110938" />
+    <file id="9" name="electric_place_2.png" width="159" height="163" pivot_x="0.70094335" pivot_y="0.6851227" />
+    <file id="10" name="electric_place_3.png" width="224" height="69" pivot_x="0.5011161" pivot_y="0.5152174" />
+    <file id="11" name="electric_place_4.png" width="155" height="105" pivot_x="0.7174193" pivot_y="0.5232889" />
+    <file id="12" name="electric_place_5.png" width="90" height="105" pivot_x="0.5138889" pivot_y="0.527619" />
+    <file id="13" name="electric_place_6.png" width="153" height="75" pivot_x="0.7390523" pivot_y="0.549" />
+    <file id="14" name="horizontal_0.png" width="224" height="74" pivot_x="0.50223213" pivot_y="0.49527025" />
+    <file id="15" name="horizontal_place_0.png" width="224" height="74" pivot_x="0.5011161" pivot_y="0.49527025" />
+    <file id="16" name="outline_0.png" width="221" height="219" pivot_x="0.5032805" pivot_y="0.5018265" />
+    <file id="17" name="outline_1.png" width="222" height="180" pivot_x="0.5010135" pivot_y="0.62666667" />
+    <file id="18" name="outline_2.png" width="177" height="176" pivot_x="0.6242938" pivot_y="0.63096595" />
+    <file id="19" name="outline_3.png" width="222" height="117" pivot_x="0.5010135" pivot_y="0.5053419" />
+    <file id="20" name="outline_4.png" width="175" height="145" pivot_x="0.6314286" pivot_y="0.507069" />
+    <file id="21" name="outline_5.png" width="135" height="146" pivot_x="0.5151852" pivot_y="0.51044524" />
+    <file id="22" name="outline_6.png" width="176" height="130" pivot_x="0.63778406" pivot_y="0.50884616" />
+    <file id="23" name="ui_0.png" width="263" height="240" pivot_x="0.59344107" pivot_y="0.47567707" />
+    <file id="24" name="vertical_0.png" width="69" height="223" pivot_x="0.5543478" pivot_y="0.5047085" />
+    <file id="25" name="vertical_place_0.png" width="69" height="223" pivot_x="0.5543478" pivot_y="0.5047085" />
+  </folder>
+  <entity id="0" name="MediumWire">
+    <animation id="0" name="LRUD" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="0" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="16" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="1" name="LRD" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="1" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="17" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="2" name="RUD" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="1" x="-0.44999998807907104" y="49.95000076293945" angle="90" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="17" x="-0.44999998807907104" y="49.95000076293945" angle="90" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="3" name="LRU" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="1" x="-0.05000000074505806" y="49.57500076293945" angle="-0" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="17" x="-0.05000000074505806" y="49.57500076293945" angle="-0" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="4" name="LUD" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="1" x="0.4000000059604645" y="49.974998474121094" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="17" x="0.4000000059604645" y="49.974998474121094" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="5" name="LR" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="3" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="19" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="6" name="UD" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="3" x="0.10000000149011612" y="49.974998474121094" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="19" x="0.10000000149011612" y="49.974998474121094" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="7" name="LD" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="2" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="18" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="8" name="LU" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="2" x="0.4000000059604645" y="50.125" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="18" x="0.4000000059604645" y="50.125" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="9" name="RD" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="2" x="-0.375" y="49.92499923706055" angle="90" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="18" x="-0.375" y="49.92499923706055" angle="90" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="10" name="RU" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="2" x="0" y="49.599998474121094" angle="180" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="18" x="0" y="49.599998474121094" angle="180" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="11" name="L" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="6" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="22" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="12" name="U" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="6" x="0.4000000059604645" y="50.25" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="22" x="0.4000000059604645" y="50.25" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="13" name="D" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="6" x="-0.4000000059604645" y="49.775001525878906" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="22" x="-0.4000000059604645" y="49.775001525878906" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="14" name="R" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="6" x="0.15000000596046448" y="49.54999923706055" angle="180" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="22" x="0.15000000596046448" y="49.54999923706055" angle="180" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="15" name="None" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_0">
+        <key id="0" time="0">
+          <object folder="0" file="5" x="0.625" y="50.150001525878906" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="outline_0">
+        <key id="0" time="0">
+          <object folder="0" file="21" x="0.625" y="50.150001525878906" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="16" name="LRUD_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="7" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="17" name="LRD_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="8" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="18" name="RUD_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="8" x="-0.44999998807907104" y="49.95000076293945" angle="90" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="19" name="LRU_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="8" x="-0.05000000074505806" y="49.57500076293945" angle="-0" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="20" name="LUD_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="8" x="0.4000000059604645" y="49.974998474121094" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="21" name="LR_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="10" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="22" name="UD_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="10" x="0.10000000149011612" y="49.974998474121094" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="23" name="LD_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="9" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="24" name="LU_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="9" x="0.4000000059604645" y="50.125" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="25" name="RD_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="9" x="-0.375" y="49.92499923706055" angle="90" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="26" name="RU_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="9" x="0" y="49.599998474121094" angle="180" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="27" name="L_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="13" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="28" name="U_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="13" x="0.4000000059604645" y="50.25" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="29" name="D_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="13" x="-0.4000000059604645" y="49.775001525878906" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="30" name="R_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="13" x="0.15000000596046448" y="49.54999923706055" angle="180" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="31" name="None_place" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="electric_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="12" x="0.625" y="50.150001525878906" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="32" name="ui" length="132" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+        <key id="1" time="33">
+          <object_ref id="0" timeline="0" key="1" z_index="1" />
+        </key>
+        <key id="2" time="66">
+          <object_ref id="0" timeline="0" key="2" z_index="1" />
+        </key>
+        <key id="3" time="99">
+          <object_ref id="0" timeline="0" key="3" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="ui_0">
+        <key id="0" time="0">
+          <object folder="0" file="23" x="9" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="1" time="33">
+          <object folder="0" file="23" x="9" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="2" time="66">
+          <object folder="0" file="23" x="9" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="3" time="99">
+          <object folder="0" file="23" x="9" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="33" name="LR_UD_Bridge" length="33" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="horizontal_0">
+        <key id="0" time="0">
+          <object folder="0" file="14" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="vertical_0">
+        <key id="0" time="0">
+          <object folder="0" file="24" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="34" name="LR_UD_Bridge_place" length="297" interval="33">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="2" />
+          <object_ref id="1" timeline="1" key="0" z_index="1" />
+        </key>
+        <key id="1" time="33">
+          <object_ref id="2" timeline="2" key="1" z_index="1" />
+        </key>
+        <key id="2" time="66">
+          <object_ref id="2" timeline="2" key="2" z_index="1" />
+        </key>
+        <key id="3" time="99">
+          <object_ref id="2" timeline="2" key="3" z_index="1" />
+        </key>
+        <key id="4" time="132">
+          <object_ref id="2" timeline="2" key="4" z_index="1" />
+        </key>
+        <key id="5" time="165">
+          <object_ref id="3" timeline="3" key="5" z_index="1" />
+        </key>
+        <key id="6" time="198">
+          <object_ref id="3" timeline="3" key="6" z_index="1" />
+        </key>
+        <key id="7" time="231">
+          <object_ref id="3" timeline="3" key="7" z_index="1" />
+        </key>
+        <key id="8" time="264">
+          <object_ref id="3" timeline="3" key="8" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="horizontal_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="15" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="1" name="vertical_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="25" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="2" name="electric_0">
+        <key id="1" time="33">
+          <object folder="0" file="4" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="2" time="66">
+          <object folder="0" file="4" x="0.4000000059604645" y="50.25" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="3" time="99">
+          <object folder="0" file="4" x="-0.4000000059604645" y="49.775001525878906" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+        <key id="4" time="132">
+          <object folder="0" file="4" x="0.15000000596046448" y="49.54999923706055" angle="180" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+      <timeline id="3" name="electric_place_0">
+        <key id="5" time="165">
+          <object folder="0" file="11" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="6" time="198">
+          <object folder="0" file="11" x="0.4000000059604645" y="50.25" angle="270" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="7" time="231">
+          <object folder="0" file="11" x="-0.4000000059604645" y="49.775001525878906" angle="90" scale_x="1" scale_y="-1" a="1" />
+        </key>
+        <key id="8" time="264">
+          <object folder="0" file="11" x="0.15000000596046448" y="49.54999923706055" angle="180" scale_x="1" scale_y="-1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+  </entity>
+</spriter_data>

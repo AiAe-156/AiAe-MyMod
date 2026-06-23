@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>RadialMenu_ZH</AssemblyName>
+    <RootNamespace>RadialMenuZH</RootNamespace>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\Release\</OutputPath>
+    <Optimize>true</Optimize>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameManagedDir>F:\Games\SteamLibrary\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</GameManagedDir>
+    <ModOutputDir>C:\Users\AiAe\Documents\Klei\OxygenNotIncluded\mods\Local\RadialMenu_ZH</ModOutputDir>
+  </PropertyGroup>
+
+  <!-- net48 参考程序集：不依赖系统是否安装 4.8 目标包（Windows 升级后目标包被挪进 Windows.old，
+       用这个 NuGet 包可独立提供参考程序集，保证可编译）。游戏 DLL 也是 net48。 -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- 引用游戏自带程序集；Private=False 表示不把它们拷进输出（游戏运行时自带） -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(GameManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(GameManagedDir)\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(GameManagedDir)\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(GameManagedDir)\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(GameManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 编译成功后自动复制 dll + 两个 yaml 到缺氧 Local 模组目录 -->
+  <Target Name="CopyToModDir" AfterTargets="Build">
+    <MakeDir Directories="$(ModOutputDir)" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(ModOutputDir)" />
+    <Copy SourceFiles="mod.yaml;mod_info.yaml" DestinationFolder="$(ModOutputDir)" />
+  </Target>
+</Project>

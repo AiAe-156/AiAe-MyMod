@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>DirectIrrigation</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="PeterHan.PLib.Core.PLibStrings.fr.po" />
+    <None Remove="PeterHan.PLib.Core.PLibStrings.ru.po" />
+    <None Remove="PeterHan.PLib.Core.PLibStrings.zh.po" />
+    <None Remove="ILRepack.List" />
+    <EmbeddedResource Include="PeterHan.PLib.Core.PLibStrings.fr.po" LogicalName="PeterHan.PLib.Core.PLibStrings.fr.po" />
+    <EmbeddedResource Include="PeterHan.PLib.Core.PLibStrings.ru.po" LogicalName="PeterHan.PLib.Core.PLibStrings.ru.po" />
+    <EmbeddedResource Include="PeterHan.PLib.Core.PLibStrings.zh.po" LogicalName="PeterHan.PLib.Core.PLibStrings.zh.po" />
+    <EmbeddedResource Include="ILRepack.List" LogicalName="ILRepack.List" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" />
+    <Reference Include="0Harmony" />
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="Assembly-CSharp-firstpass" />
+    <Reference Include="UnityEngine.UnityWebRequestModule" />
+    <Reference Include="Newtonsoft.Json" />
+    <Reference Include="Unity.TextMeshPro" />
+    <Reference Include="UnityEngine.UI" />
+    <Reference Include="UnityEngine.TextRenderingModule" />
+    <Reference Include="UnityEngine.TextCoreFontEngineModule" />
+    <Reference Include="UnityEngine.UIModule" />
+    <Reference Include="UnityEngine.InputLegacyModule" />
+    <Reference Include="UnityEngine.ImageConversionModule" />
+    <Reference Include="UnityEngine.AssetBundleModule" />
+    <Reference Include="FMODUnity" />
+  </ItemGroup>
+</Project>

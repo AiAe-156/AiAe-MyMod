@@ -1,0 +1,491 @@
+#define UNITY_ASSERTIONS
+using System;
+using System.Collections.Generic;
+using Database;
+using Klei.AI;
+using STRINGS;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class ProductInfoScreen : KScreen
+{
+	public TitleBar titleBar;
+
+	public GameObject ProductDescriptionPane;
+
+	public LocText productDescriptionText;
+
+	public DescriptorPanel ProductRequirementsPane;
+
+	public DescriptorPanel ProductEffectsPane;
+
+	public DescriptorPanel RoomConstrainsPanel;
+
+	public GameObject ProductFlavourPane;
+
+	public LocText productFlavourText;
+
+	public RectTransform BGPanel;
+
+	public MaterialSelectionPanel materialSelectionPanelPrefab;
+
+	public FacadeSelectionPanel facadeSelectionPanelPrefab;
+
+	private Dictionary<string, GameObject> descLabels = new Dictionary<string, GameObject>();
+
+	public MultiToggle sandboxInstantBuildToggle;
+
+	private List<Tag> HiddenRoomConstrainTags = new List<Tag>
+	{
+		RoomConstraints.ConstraintTags.Refrigerator,
+		RoomConstraints.ConstraintTags.FarmStationType,
+		RoomConstraints.ConstraintTags.LuxuryBedType,
+		RoomConstraints.ConstraintTags.MassageTable,
+		RoomConstraints.ConstraintTags.MessTable,
+		RoomConstraints.ConstraintTags.NatureReserve,
+		RoomConstraints.ConstraintTags.Park,
+		RoomConstraints.ConstraintTags.SpiceStation,
+		RoomConstraints.ConstraintTags.DeStressingBuilding,
+		RoomConstraints.ConstraintTags.MachineShopType
+	};
+
+	[NonSerialized]
+	public MaterialSelectionPanel materialSelectionPanel;
+
+	[SerializeField]
+	private FacadeSelectionPanel facadeSelectionPanel;
+
+	[NonSerialized]
+	public BuildingDef currentDef;
+
+	public System.Action onElementsFullySelected;
+
+	private bool expandedInfo = true;
+
+	private bool configuring = false;
+
+	public FacadeSelectionPanel FacadeSelectionPanel => facadeSelectionPanel;
+
+	private void RefreshScreen()
+	{
+		if (currentDef != null)
+		{
+			SetTitle(currentDef);
+		}
+		else
+		{
+			ClearProduct();
+		}
+	}
+
+	public void ClearProduct(bool deactivateTool = true)
+	{
+		if (!(materialSelectionPanel == null))
+		{
+			currentDef = null;
+			materialSelectionPanel.ClearMaterialToggles();
+			if (PlayerController.Instance.ActiveTool == BuildTool.Instance && deactivateTool)
+			{
+				BuildTool.Instance.Deactivate();
+			}
+			if (PlayerController.Instance.ActiveTool == UtilityBuildTool.Instance || PlayerController.Instance.ActiveTool == WireBuildTool.Instance)
+			{
+				ToolMenu.Instance.ClearSelection();
+			}
+			ClearLabels();
+			Show(show: false);
+		}
+	}
+
+	public new void Awake()
+	{
+		base.Awake();
+		facadeSelectionPanel = Util.KInstantiateUI<FacadeSelectionPanel>(facadeSelectionPanelPrefab.gameObject, base.gameObject);
+		FacadeSelectionPanel obj = facadeSelectionPanel;
+		obj.OnFacadeSelectionChanged = (System.Action)Delegate.Combine(obj.OnFacadeSelectionChanged, new System.Action(OnFacadeSelectionChanged));
+		materialSelectionPanel = Util.KInstantiateUI<MaterialSelectionPanel>(materialSelectionPanelPrefab.gameObject, base.gameObject);
+	}
+
+	protected override void OnSpawn()
+	{
+		base.OnSpawn();
+		if (BuildingGroupScreen.Instance != null)
+		{
+			BuildingGroupScreen instance = BuildingGroupScreen.Instance;
+			instance.pointerEnterActions = (PointerEnterActions)Delegate.Combine(instance.pointerEnterActions, new PointerEnterActions(CheckMouseOver));
+			BuildingGroupScreen instance2 = BuildingGroupScreen.Instance;
+			instance2.pointerExitActions = (PointerExitActions)Delegate.Combine(instance2.pointerExitActions, new PointerExitActions(CheckMouseOver));
+		}
+		if (PlanScreen.Instance != null)
+		{
+			PlanScreen instance3 = PlanScreen.Instance;
+			instance3.pointerEnterActions = (PointerEnterActions)Delegate.Combine(instance3.pointerEnterActions, new PointerEnterActions(CheckMouseOver));
+			PlanScreen instance4 = PlanScreen.Instance;
+			instance4.pointerExitActions = (PointerExitActions)Delegate.Combine(instance4.pointerExitActions, new PointerExitActions(CheckMouseOver));
+		}
+		if (BuildMenu.Instance != null)
+		{
+			BuildMenu instance5 = BuildMenu.Instance;
+			instance5.pointerEnterActions = (PointerEnterActions)Delegate.Combine(instance5.pointerEnterActions, new PointerEnterActions(CheckMouseOver));
+			BuildMenu instance6 = BuildMenu.Instance;
+			instance6.pointerExitActions = (PointerExitActions)Delegate.Combine(instance6.pointerExitActions, new PointerExitActions(CheckMouseOver));
+		}
+		pointerEnterActions = (PointerEnterActions)Delegate.Combine(pointerEnterActions, new PointerEnterActions(CheckMouseOver));
+		pointerExitActions = (PointerExitActions)Delegate.Combine(pointerExitActions, new PointerExitActions(CheckMouseOver));
+		base.ConsumeMouseScroll = true;
+		sandboxInstantBuildToggle.ChangeState(SandboxToolParameterMenu.instance.settings.InstantBuild ? 1 : 0);
+		MultiToggle multiToggle = sandboxInstantBuildToggle;
+		multiToggle.onClick = (System.Action)Delegate.Combine(multiToggle.onClick, (System.Action)delegate
+		{
+			SandboxToolParameterMenu.instance.settings.InstantBuild = !SandboxToolParameterMenu.instance.settings.InstantBuild;
+			sandboxInstantBuildToggle.ChangeState(SandboxToolParameterMenu.instance.settings.InstantBuild ? 1 : 0);
+		});
+		sandboxInstantBuildToggle.gameObject.SetActive(Game.Instance.SandboxModeActive);
+		Game.Instance.Subscribe(-1948169901, delegate
+		{
+			sandboxInstantBuildToggle.gameObject.SetActive(Game.Instance.SandboxModeActive);
+		});
+	}
+
+	public void ConfigureScreen(BuildingDef def)
+	{
+		ConfigureScreen(def, FacadeSelectionPanel.SelectedFacade);
+	}
+
+	public void ConfigureScreen(BuildingDef def, string facadeID)
+	{
+		configuring = true;
+		currentDef = def;
+		SetTitle(def);
+		SetDescription(def);
+		SetEffects(def);
+		facadeSelectionPanel.SetBuildingDef(def.PrefabID);
+		BuildingFacadeResource buildingFacadeResource = null;
+		if ("DEFAULT_FACADE" != facadeID)
+		{
+			buildingFacadeResource = Db.GetBuildingFacades().TryGet(facadeID);
+		}
+		if (buildingFacadeResource != null && buildingFacadeResource.PrefabID == def.PrefabID && buildingFacadeResource.IsUnlocked())
+		{
+			facadeSelectionPanel.SelectedFacade = facadeID;
+		}
+		else
+		{
+			facadeSelectionPanel.SelectedFacade = "DEFAULT_FACADE";
+		}
+		SetMaterials(def);
+		configuring = false;
+	}
+
+	private void ExpandInfo(PointerEventData data)
+	{
+		ToggleExpandedInfo(state: true);
+	}
+
+	private void CollapseInfo(PointerEventData data)
+	{
+		ToggleExpandedInfo(state: false);
+	}
+
+	public void ToggleExpandedInfo(bool state)
+	{
+		expandedInfo = state;
+		if (ProductDescriptionPane != null)
+		{
+			ProductDescriptionPane.SetActive(expandedInfo);
+		}
+		if (ProductRequirementsPane != null)
+		{
+			ProductRequirementsPane.gameObject.SetActive(expandedInfo && ProductRequirementsPane.HasDescriptors());
+		}
+		if (RoomConstrainsPanel != null)
+		{
+			RoomConstrainsPanel.gameObject.SetActive(expandedInfo && RoomConstrainsPanel.HasDescriptors());
+		}
+		if (ProductEffectsPane != null)
+		{
+			ProductEffectsPane.gameObject.SetActive(expandedInfo && ProductEffectsPane.HasDescriptors());
+		}
+		if (ProductFlavourPane != null)
+		{
+			ProductFlavourPane.SetActive(expandedInfo);
+		}
+		if (materialSelectionPanel != null && materialSelectionPanel.CurrentSelectedElement != null)
+		{
+			materialSelectionPanel.ToggleShowDescriptorPanels(expandedInfo);
+		}
+	}
+
+	private void CheckMouseOver(PointerEventData data)
+	{
+		bool state = base.GetMouseOver || (PlanScreen.Instance != null && ((PlanScreen.Instance.IsScreenActive() && PlanScreen.Instance.GetMouseOver) || BuildingGroupScreen.Instance.GetMouseOver)) || (BuildMenu.Instance != null && BuildMenu.Instance.IsScreenActive() && BuildMenu.Instance.GetMouseOver);
+		ToggleExpandedInfo(state);
+	}
+
+	private void Update()
+	{
+		if (!DebugHandler.InstantBuildMode && !Game.Instance.SandboxModeActive && currentDef != null && materialSelectionPanel.CurrentSelectedElement != null && !MaterialSelector.AllowInsufficientMaterialBuild() && currentDef.Mass[0] > ClusterManager.Instance.activeWorld.worldInventory.GetAmount(materialSelectionPanel.CurrentSelectedElement, includeRelatedWorlds: true))
+		{
+			materialSelectionPanel.AutoSelectAvailableMaterial();
+		}
+	}
+
+	private void SetTitle(BuildingDef def)
+	{
+		titleBar.SetTitle(def.Name);
+		bool flag = (PlanScreen.Instance != null && PlanScreen.Instance.isActiveAndEnabled && PlanScreen.Instance.IsDefBuildable(def)) || (BuildMenu.Instance != null && BuildMenu.Instance.isActiveAndEnabled && BuildMenu.Instance.BuildableState(def) == PlanScreen.RequirementsState.Complete);
+		titleBar.GetComponentInChildren<KImage>().ColorState = ((!flag) ? KImage.ColorSelector.Disabled : KImage.ColorSelector.Active);
+	}
+
+	private void SetDescription(BuildingDef def)
+	{
+		UnityEngine.Debug.Assert(def != null, "def is null");
+		if (def == null || productFlavourText == null)
+		{
+			return;
+		}
+		string text = "";
+		text += def.Desc;
+		Dictionary<Klei.AI.Attribute, float> dictionary = new Dictionary<Klei.AI.Attribute, float>();
+		Dictionary<Klei.AI.Attribute, float> dictionary2 = new Dictionary<Klei.AI.Attribute, float>();
+		foreach (Klei.AI.Attribute attribute in def.attributes)
+		{
+			if (!dictionary.ContainsKey(attribute))
+			{
+				dictionary[attribute] = 0f;
+			}
+		}
+		foreach (AttributeModifier attributeModifier in def.attributeModifiers)
+		{
+			float value = 0f;
+			Klei.AI.Attribute key = Db.Get().BuildingAttributes.Get(attributeModifier.AttributeId);
+			dictionary.TryGetValue(key, out value);
+			value += attributeModifier.Value;
+			dictionary[key] = value;
+		}
+		if (materialSelectionPanel.CurrentSelectedElement != null)
+		{
+			Element element = ElementLoader.GetElement(materialSelectionPanel.CurrentSelectedElement);
+			if (element != null)
+			{
+				foreach (AttributeModifier attributeModifier2 in element.attributeModifiers)
+				{
+					float value2 = 0f;
+					Klei.AI.Attribute key2 = Db.Get().BuildingAttributes.Get(attributeModifier2.AttributeId);
+					dictionary2.TryGetValue(key2, out value2);
+					value2 += attributeModifier2.Value;
+					dictionary2[key2] = value2;
+				}
+			}
+			else
+			{
+				GameObject gameObject = Assets.TryGetPrefab(materialSelectionPanel.CurrentSelectedElement);
+				PrefabAttributeModifiers component = gameObject.GetComponent<PrefabAttributeModifiers>();
+				if (component != null)
+				{
+					foreach (AttributeModifier descriptor in component.descriptors)
+					{
+						float value3 = 0f;
+						Klei.AI.Attribute key3 = Db.Get().BuildingAttributes.Get(descriptor.AttributeId);
+						dictionary2.TryGetValue(key3, out value3);
+						value3 += descriptor.Value;
+						dictionary2[key3] = value3;
+					}
+				}
+			}
+		}
+		if (dictionary.Count > 0)
+		{
+			text += "\n\n";
+			foreach (KeyValuePair<Klei.AI.Attribute, float> item in dictionary)
+			{
+				float value4 = 0f;
+				dictionary.TryGetValue(item.Key, out value4);
+				float value5 = 0f;
+				string text2 = "";
+				if (dictionary2.TryGetValue(item.Key, out value5))
+				{
+					value5 = Mathf.Abs(value4 * value5);
+					text2 = "(+" + value5 + ")";
+				}
+				text = text + "\n" + item.Key.Name + ": " + (value4 + value5) + text2;
+			}
+		}
+		productFlavourText.text = text;
+	}
+
+	private void SetEffects(BuildingDef def)
+	{
+		if (productDescriptionText.text != null)
+		{
+			productDescriptionText.text = $"{def.Effect}";
+		}
+		ListPool<(ElementConverter, List<Descriptor>), ProductInfoScreen>.PooledList pooledList = ListPool<(ElementConverter, List<Descriptor>), ProductInfoScreen>.Allocate();
+		ListPool<Descriptor, ProductInfoScreen>.PooledList pooledList2 = ListPool<Descriptor, ProductInfoScreen>.Allocate();
+		ListPool<Descriptor, ProductInfoScreen>.PooledList pooledList3 = ListPool<Descriptor, ProductInfoScreen>.Allocate();
+		GameUtil.PartitionBuildingDescriptors(def.BuildingComplete, simpleInfoScreen: false, out var _, pooledList, pooledList2, pooledList3, out var hasConverterReqs);
+		bool flag = pooledList2.Count > 0 || pooledList.Count > 0;
+		List<Descriptor> list = new List<Descriptor>();
+		if (flag)
+		{
+			Descriptor item = default(Descriptor);
+			item.SetupDescriptor(UI.BUILDINGEFFECTS.OPERATIONREQUIREMENTS, UI.BUILDINGEFFECTS.TOOLTIPS.OPERATIONREQUIREMENTS);
+			list.Add(item);
+			GameUtil.BuildPartitionedRequirements(list, pooledList2, pooledList, hasConverterReqs);
+		}
+		ProductRequirementsPane.gameObject.SetActive(flag);
+		ProductRequirementsPane.SetDescriptors(list);
+		bool flag2 = pooledList3.Count > 0 || pooledList.Count > 0;
+		List<Descriptor> list2 = new List<Descriptor>();
+		if (flag2)
+		{
+			Descriptor item2 = default(Descriptor);
+			item2.SetupDescriptor(UI.BUILDINGEFFECTS.OPERATIONEFFECTS, UI.BUILDINGEFFECTS.TOOLTIPS.OPERATIONEFFECTS);
+			list2.Add(item2);
+			GameUtil.BuildPartitionedEffects(list2, pooledList3, pooledList);
+		}
+		ProductEffectsPane.gameObject.SetActive(flag2);
+		ProductEffectsPane.SetDescriptors(list2);
+		pooledList2.Recycle();
+		pooledList3.Recycle();
+		pooledList.Recycle();
+		List<Descriptor> list3 = new List<Descriptor>();
+		KPrefabID component = def.BuildingComplete.GetComponent<KPrefabID>();
+		foreach (Tag tag in component.Tags)
+		{
+			if (RoomConstraints.ConstraintTags.AllTags.Contains(tag) && !HiddenRoomConstrainTags.Contains(tag))
+			{
+				Descriptor item3 = default(Descriptor);
+				item3.SetupDescriptor(RoomConstraints.ConstraintTags.GetRoomConstraintLabelText(tag), null);
+				list3.Add(item3);
+			}
+		}
+		if (list3.Count > 0)
+		{
+			list3 = GameUtil.GetEffectDescriptors(list3);
+			Descriptor item4 = default(Descriptor);
+			item4.SetupDescriptor(CODEX.HEADERS.BUILDINGTYPE, UI.BUILDINGEFFECTS.TOOLTIPS.BUILDINGROOMREQUIREMENTCLASS);
+			list3.Insert(0, item4);
+			RoomConstrainsPanel.gameObject.SetActive(value: true);
+		}
+		else
+		{
+			RoomConstrainsPanel.gameObject.SetActive(value: false);
+		}
+		RoomConstrainsPanel.SetDescriptors(list3);
+	}
+
+	public void ClearLabels()
+	{
+		List<string> list = new List<string>(descLabels.Keys);
+		if (list.Count <= 0)
+		{
+			return;
+		}
+		foreach (string item in list)
+		{
+			GameObject gameObject = descLabels[item];
+			if (gameObject != null)
+			{
+				UnityEngine.Object.Destroy(gameObject);
+			}
+			descLabels.Remove(item);
+		}
+	}
+
+	public void SetMaterials(BuildingDef def)
+	{
+		materialSelectionPanel.gameObject.SetActive(value: true);
+		Recipe craftRecipe = def.CraftRecipe;
+		materialSelectionPanel.ClearSelectActions();
+		materialSelectionPanel.ConfigureScreen(craftRecipe, PlanScreen.Instance.IsDefBuildable, PlanScreen.Instance.GetTooltipForBuildable);
+		materialSelectionPanel.ToggleShowDescriptorPanels(show: false);
+		materialSelectionPanel.AddSelectAction(RefreshScreen);
+		materialSelectionPanel.AddSelectAction(onMenuMaterialChanged);
+		materialSelectionPanel.AutoSelectAvailableMaterial();
+		ActivateAppropriateTool(def);
+	}
+
+	private void OnFacadeSelectionChanged()
+	{
+		if (!(currentDef == null))
+		{
+			ActivateAppropriateTool(currentDef);
+		}
+	}
+
+	private void onMenuMaterialChanged()
+	{
+		if (!(currentDef == null))
+		{
+			ActivateAppropriateTool(currentDef);
+			SetDescription(currentDef);
+		}
+	}
+
+	private void ActivateAppropriateTool(BuildingDef def)
+	{
+		Debug.Assert(def != null, "def was null");
+		bool num;
+		if (!(PlanScreen.Instance != null))
+		{
+			if (!(BuildMenu.Instance != null))
+			{
+				goto IL_0081;
+			}
+			num = BuildMenu.Instance.BuildableState(def) == PlanScreen.RequirementsState.Complete;
+		}
+		else
+		{
+			num = PlanScreen.Instance.IsDefBuildable(def);
+		}
+		if (num && materialSelectionPanel.AllSelectorsSelected() && facadeSelectionPanel.SelectedFacade != null)
+		{
+			onElementsFullySelected.Signal();
+			return;
+		}
+		goto IL_0081;
+		IL_0081:
+		if (!MaterialSelector.AllowInsufficientMaterialBuild() && !DebugHandler.InstantBuildMode)
+		{
+			if (PlayerController.Instance.ActiveTool == BuildTool.Instance)
+			{
+				BuildTool.Instance.Deactivate();
+			}
+			PrebuildTool.Instance.Activate(def, PlanScreen.Instance.GetTooltipForBuildable(def));
+		}
+	}
+
+	public static bool MaterialsMet(Recipe recipe)
+	{
+		if (recipe == null)
+		{
+			Debug.LogError("Trying to verify the materials on a null recipe!");
+			return false;
+		}
+		if (recipe.Ingredients == null || recipe.Ingredients.Count == 0)
+		{
+			Debug.LogError("Trying to verify the materials on a recipe with no MaterialCategoryTags!");
+			return false;
+		}
+		bool result = true;
+		for (int i = 0; i < recipe.Ingredients.Count; i++)
+		{
+			if (MaterialSelectionPanel.Filter(recipe.Ingredients[i].tag).kgAvailable < recipe.Ingredients[i].amount)
+			{
+				result = false;
+				break;
+			}
+		}
+		return result;
+	}
+
+	public void Close()
+	{
+		if (!configuring)
+		{
+			ClearProduct();
+			Show(show: false);
+		}
+	}
+}

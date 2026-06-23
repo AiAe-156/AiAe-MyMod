@@ -1,0 +1,132 @@
+using System.Collections.Generic;
+using KSerialization;
+using STRINGS;
+using UnityEngine;
+
+[SerializationConfig(MemberSerialization.OptIn)]
+[AddComponentMenu("KMonoBehaviour/scripts/JetSuitTank")]
+public class JetSuitTank : KMonoBehaviour, IGameObjectEffectDescriptor, IDevQuickAction
+{
+	[MyCmpGet]
+	private ElementEmitter elementConverter;
+
+	[Serialize]
+	public SimHashes lastFuelUsed = SimHashes.Vacuum;
+
+	[Serialize]
+	public float amount;
+
+	public const float FUEL_CAPACITY = 100f;
+
+	public const float FUEL_BURN_RATE = 0.2f;
+
+	public const float CO2_EMITTED_PER_FUEL_BURNED = 0.25f;
+
+	public const float EMIT_TEMPERATURE = 373.15f;
+
+	public const float REFILL_PERCENT = 0.2f;
+
+	private JetSuitMonitor.Instance jetSuitMonitor;
+
+	private static readonly EventSystem.IntraObjectHandler<JetSuitTank> OnEquippedDelegate = new EventSystem.IntraObjectHandler<JetSuitTank>(delegate(JetSuitTank component, object data)
+	{
+		component.OnEquipped(data);
+	});
+
+	private static readonly EventSystem.IntraObjectHandler<JetSuitTank> OnUnequippedDelegate = new EventSystem.IntraObjectHandler<JetSuitTank>(delegate(JetSuitTank component, object data)
+	{
+		component.OnUnequipped(data);
+	});
+
+	protected override void OnPrefabInit()
+	{
+		base.OnPrefabInit();
+		Subscribe(-1617557748, OnEquippedDelegate);
+		Subscribe(-170173755, OnUnequippedDelegate);
+	}
+
+	public float PercentFull()
+	{
+		return amount / 100f;
+	}
+
+	public bool IsEmpty()
+	{
+		return amount <= 0f;
+	}
+
+	public bool IsFull()
+	{
+		return PercentFull() >= 1f;
+	}
+
+	public bool NeedsRecharging()
+	{
+		return PercentFull() < 0.2f;
+	}
+
+	public List<Descriptor> GetDescriptors(GameObject go)
+	{
+		List<Descriptor> list = new List<Descriptor>();
+		string text = string.Format(UI.UISIDESCREENS.FABRICATORSIDESCREEN.EFFECTS.JETSUIT_TANK, GameUtil.GetFormattedMass(amount));
+		list.Add(new Descriptor(text, text));
+		return list;
+	}
+
+	private void OnEquipped(object data)
+	{
+		Equipment equipment = (Equipment)data;
+		NameDisplayScreen.Instance.SetSuitFuelDisplay(equipment.GetComponent<MinionAssignablesProxy>().GetTargetGameObject(), PercentFull, bVisible: true);
+		jetSuitMonitor = new JetSuitMonitor.Instance(this, equipment.GetComponent<MinionAssignablesProxy>().GetTargetGameObject());
+		jetSuitMonitor.StartSM();
+		if (IsEmpty())
+		{
+			equipment.GetComponent<MinionAssignablesProxy>().GetTargetGameObject().AddTag(GameTags.JetSuitOutOfFuel);
+		}
+	}
+
+	private void OnUnequipped(object data)
+	{
+		Equipment equipment = (Equipment)data;
+		if (!equipment.destroyed)
+		{
+			equipment.GetComponent<MinionAssignablesProxy>().GetTargetGameObject().RemoveTag(GameTags.JetSuitOutOfFuel);
+			NameDisplayScreen.Instance.SetSuitFuelDisplay(equipment.GetComponent<MinionAssignablesProxy>().GetTargetGameObject(), null, bVisible: false);
+			Navigator component = equipment.GetComponent<MinionAssignablesProxy>().GetTargetGameObject().GetComponent<Navigator>();
+			if ((bool)component && component.CurrentNavType == NavType.Hover)
+			{
+				component.SetCurrentNavType(NavType.Floor);
+			}
+		}
+		if (jetSuitMonitor != null)
+		{
+			jetSuitMonitor.StopSM("Removed jetsuit tank");
+			jetSuitMonitor = null;
+		}
+	}
+
+	[ContextMenu("Empty")]
+	public void Empty()
+	{
+		amount = 0f;
+	}
+
+	[ContextMenu("Fill Tank")]
+	public void FillTank()
+	{
+		amount = 100f;
+		if (jetSuitMonitor != null && jetSuitMonitor.sm.owner.Get(jetSuitMonitor) != null)
+		{
+			jetSuitMonitor.sm.owner.Get(jetSuitMonitor).RemoveTag(GameTags.JetSuitOutOfFuel);
+		}
+	}
+
+	public List<DevQuickActionInstruction> GetDevInstructions()
+	{
+		return new List<DevQuickActionInstruction>
+		{
+			new DevQuickActionInstruction(IDevQuickAction.CommonMenusNames.Storage, "Fill Fuel", FillTank),
+			new DevQuickActionInstruction(IDevQuickAction.CommonMenusNames.Storage, "Empty Fuel", Empty)
+		};
+	}
+}

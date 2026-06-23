@@ -1,0 +1,19 @@
+using UnityEngine;
+
+namespace Database;
+
+public class CritterEmotion
+{
+	public string id;
+
+	public bool isPositiveEmotion;
+
+	public Sprite sprite;
+
+	public CritterEmotion(string id, bool isPositiveEmotion, Sprite sprite)
+	{
+		this.id = id;
+		this.isPositiveEmotion = isPositiveEmotion;
+		this.sprite = sprite;
+	}
+}

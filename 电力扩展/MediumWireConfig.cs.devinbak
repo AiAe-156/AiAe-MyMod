@@ -1,0 +1,58 @@
+﻿using UnityEngine;
+
+namespace PowerExtension
+{
+    public class MediumWireConfig : BaseWireConfig
+    {
+        public const string ID = "MediumWire";
+
+        public override BuildingDef CreateBuildingDef()
+        {
+            string anim = "MediumWire_kanim";
+            float construction_time = 3f;
+            // [2026-05-28] 对齐原版橡胶绝缘导线设计语义：双材料 = 精炼金属 + 橡胶。
+            // 质量采用 TIER0[0] (主材) + TIER_SMALL[0] (辅材)，与 WireRubberConfig 一致。
+            float[] construction_mass = new float[2]
+            {
+                TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER0[0],
+                TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER_SMALL[0]
+            };
+            string[] construction_materials = new string[2]
+            {
+                "RefinedMetal",
+                SimHashes.Rubber.ToString()
+            };
+            float insulation = 0.05f;
+
+            EffectorValues decor = new EffectorValues { amount = -5, radius = 1 };
+
+            BuildingDef def = CreateBuildingDef(
+                ID,
+                anim,
+                construction_time,
+                construction_mass,
+                insulation,
+                noise: TUNING.NOISE_POLLUTION.NONE,
+                decor: decor
+            );
+
+            def.MaterialCategory = construction_materials;
+            def.BuildLocationRule = BuildLocationRule.Anywhere;
+            return def;
+        }
+
+        public override string[] GetRequiredDlcIds()
+        {
+            // 需要 Aquatic DLC (DLC5) 提供橡胶原材料
+            return DlcManager.DLC5;
+        }
+
+        public override void DoPostConfigureComplete(GameObject go)
+        {
+            // [2026-05-28] U59 官方 4kW Max4000=5，本 mod 错位取 Max8kW=6（8kW）
+            // 提供比官方高一档的中压导线。neededSize=Max8kW+1=7，
+            // 由 PowerExtensionPatches 中的 wireGroups/bridgeGroups 扩展 patch 保证不越界。
+            DoPostConfigureComplete((Wire.WattageRating)PowerExtensionPatches.ExtendedWattageRating.Max8kW, go);
+        }
+    }
+}

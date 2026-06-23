@@ -1,0 +1,566 @@
+using System.Collections;
+using System.Collections.Generic;
+using KSerialization;
+using STRINGS;
+using TUNING;
+using UnityEngine;
+
+[SerializationConfig(MemberSerialization.OptIn)]
+[AddComponentMenu("KMonoBehaviour/Workable/Diggable")]
+public class Diggable : Workable
+{
+	public enum DiggableType
+	{
+		Tile = 1,
+		Backwall
+	}
+
+	private HandleVector<int>.Handle partitionerEntry;
+
+	private HandleVector<int>.Handle unstableEntry;
+
+	private HandleVector<int>.Handle backwallEntry;
+
+	private MeshRenderer childRenderer;
+
+	private bool isReachable;
+
+	private int cached_cell = -1;
+
+	private Element originalDigElement;
+
+	[MyCmpAdd]
+	private Prioritizable prioritizable;
+
+	[SerializeField]
+	public HashedString choreTypeIdHash;
+
+	[SerializeField]
+	public Material[] materials;
+
+	[SerializeField]
+	public MeshRenderer materialDisplay;
+
+	private bool isDigComplete;
+
+	[Serialize]
+	public int digTypeFlags = 1;
+
+	private static List<Tuple<string, Tag>> lasersForHardness = new List<Tuple<string, Tag>>
+	{
+		new Tuple<string, Tag>("dig", "fx_dig_splash"),
+		new Tuple<string, Tag>("specialistdig", "fx_dig_splash")
+	};
+
+	private int handle;
+
+	private static readonly EventSystem.IntraObjectHandler<Diggable> OnReachableChangedDelegate = new EventSystem.IntraObjectHandler<Diggable>(delegate(Diggable component, object data)
+	{
+		component.OnReachableChanged(data);
+	});
+
+	private static readonly EventSystem.IntraObjectHandler<Diggable> OnRefreshUserMenuDelegate = new EventSystem.IntraObjectHandler<Diggable>(delegate(Diggable component, object data)
+	{
+		component.OnRefreshUserMenu(data);
+	});
+
+	public Chore chore;
+
+	public bool Reachable => isReachable;
+
+	public bool HasDigType(DiggableType type)
+	{
+		return ((uint)digTypeFlags & (uint)type) != 0;
+	}
+
+	public bool WillDigBackwall()
+	{
+		return HasDigType(DiggableType.Backwall);
+	}
+
+	public bool WillDigTile()
+	{
+		return HasDigType(DiggableType.Tile);
+	}
+
+	protected override void OnPrefabInit()
+	{
+		base.OnPrefabInit();
+		workerStatusItem = Db.Get().DuplicantStatusItems.Digging;
+		readyForSkillWorkStatusItem = Db.Get().BuildingStatusItems.DigRequiresSkillPerk;
+		faceTargetWhenWorking = true;
+		Subscribe(-1432940121, OnReachableChangedDelegate);
+		attributeConverter = Db.Get().AttributeConverters.DiggingSpeed;
+		attributeExperienceMultiplier = DUPLICANTSTATS.ATTRIBUTE_LEVELING.MOST_DAY_EXPERIENCE;
+		skillExperienceSkillGroup = Db.Get().SkillGroups.Mining.Id;
+		skillExperienceMultiplier = SKILLS.MOST_DAY_EXPERIENCE;
+		multitoolContext = "dig";
+		multitoolHitEffectTag = "fx_dig_splash";
+		workingPstComplete = null;
+		workingPstFailed = null;
+		Prioritizable.AddRef(base.gameObject);
+	}
+
+	private Diggable()
+	{
+		SetOffsetTable(OffsetGroups.InvertedStandardTableWithCorners);
+	}
+
+	protected override void OnSpawn()
+	{
+		base.OnSpawn();
+		cached_cell = Grid.PosToCell(this);
+		originalDigElement = GetTargetElement();
+		if (originalDigElement.hardness == byte.MaxValue)
+		{
+			OnCancel();
+		}
+		GetComponent<KSelectable>().SetStatusItem(Db.Get().StatusItemCategories.Main, Db.Get().MiscStatusItems.WaitingForDig);
+		UpdateColor(isReachable);
+		Grid.Objects[cached_cell, 7] = base.gameObject;
+		ChoreType chore_type = Db.Get().ChoreTypes.Dig;
+		if (choreTypeIdHash.IsValid)
+		{
+			chore_type = Db.Get().ChoreTypes.GetByHash(choreTypeIdHash);
+		}
+		chore = new WorkChore<Diggable>(chore_type, this, null, run_until_complete: true, null, null, null, allow_in_red_alert: true, null, ignore_schedule_block: false, only_when_operational: true, null, is_preemptable: true);
+		SetWorkTime(float.PositiveInfinity);
+		partitionerEntry = GameScenePartitioner.Instance.Add("Diggable.OnSpawn", base.gameObject, Grid.PosToCell(this), GameScenePartitioner.Instance.solidChangedLayer, OnSolidChanged);
+		backwallEntry = GameScenePartitioner.Instance.Add("Diggable.OnSpawn", base.gameObject, Grid.PosToCell(this), GameScenePartitioner.Instance.backwallChangedLayer, OnSolidChanged);
+		OnSolidChanged(null);
+		new ReachabilityMonitor.Instance(this).StartSM();
+		Subscribe(493375141, OnRefreshUserMenuDelegate);
+		handle = Game.Instance.Subscribe(-1523247426, Workable.UpdateStatusItemDispatcher, this);
+		Components.Diggables.Add(this);
+	}
+
+	public override int GetCell()
+	{
+		return cached_cell;
+	}
+
+	public override AnimInfo GetAnim(WorkerBase worker)
+	{
+		AnimInfo result = default(AnimInfo);
+		if (overrideAnims != null && overrideAnims.Length != 0)
+		{
+			result.overrideAnims = overrideAnims;
+		}
+		if (multitoolContext.IsValid && multitoolHitEffectTag.IsValid)
+		{
+			result.smi = new MultitoolController.Instance(this, worker, multitoolContext, Assets.GetPrefab(multitoolHitEffectTag));
+		}
+		return result;
+	}
+
+	private static bool IsCellBuildable(int cell)
+	{
+		bool result = false;
+		GameObject gameObject = Grid.Objects[cell, 1];
+		if (gameObject != null && gameObject.GetComponent<Constructable>() != null)
+		{
+			result = true;
+		}
+		return result;
+	}
+
+	private IEnumerator PeriodicUnstableFallingRecheck()
+	{
+		yield return SequenceUtil.WaitForSeconds(2f);
+		OnSolidChanged(null);
+	}
+
+	private void OnSolidChanged(object data)
+	{
+		if (this == null || base.gameObject == null)
+		{
+			return;
+		}
+		GameScenePartitioner.Instance.Free(ref unstableEntry);
+		int num = -1;
+		Element element = ElementLoader.FindElementByHash(SimHashes.Vacuum);
+		if (WillDigTile() && Grid.IsSolidCell(cached_cell))
+		{
+			element = Grid.Element[cached_cell];
+		}
+		else if (WillDigBackwall() && BackwallManager.HasBackwall(cached_cell))
+		{
+			element = BackwallManager.At(cached_cell).Element;
+		}
+		if (element.hardness == byte.MaxValue)
+		{
+			UpdateColor(reachable: false);
+			requiredSkillPerk = null;
+			chore.AddPrecondition(ChorePreconditions.instance.HasSkillPerk, Db.Get().SkillPerks.CanDigUnobtanium);
+		}
+		else if (element.hardness >= 251)
+		{
+			bool flag = false;
+			foreach (Chore.PreconditionInstance precondition in chore.GetPreconditions())
+			{
+				if (precondition.condition.id == ChorePreconditions.instance.HasSkillPerk.id)
+				{
+					flag = true;
+					break;
+				}
+			}
+			if (!flag)
+			{
+				chore.AddPrecondition(ChorePreconditions.instance.HasSkillPerk, Db.Get().SkillPerks.CanDigRadioactiveMaterials);
+			}
+			requiredSkillPerk = Db.Get().SkillPerks.CanDigRadioactiveMaterials.Id;
+			materialDisplay.sharedMaterial = materials[3];
+		}
+		else if (element.hardness >= 200)
+		{
+			bool flag2 = false;
+			foreach (Chore.PreconditionInstance precondition2 in chore.GetPreconditions())
+			{
+				if (precondition2.condition.id == ChorePreconditions.instance.HasSkillPerk.id)
+				{
+					flag2 = true;
+					break;
+				}
+			}
+			if (!flag2)
+			{
+				chore.AddPrecondition(ChorePreconditions.instance.HasSkillPerk, Db.Get().SkillPerks.CanDigSuperDuperHard);
+			}
+			requiredSkillPerk = Db.Get().SkillPerks.CanDigSuperDuperHard.Id;
+			materialDisplay.sharedMaterial = materials[3];
+		}
+		else if (element.hardness >= 150)
+		{
+			bool flag3 = false;
+			foreach (Chore.PreconditionInstance precondition3 in chore.GetPreconditions())
+			{
+				if (precondition3.condition.id == ChorePreconditions.instance.HasSkillPerk.id)
+				{
+					flag3 = true;
+					break;
+				}
+			}
+			if (!flag3)
+			{
+				chore.AddPrecondition(ChorePreconditions.instance.HasSkillPerk, Db.Get().SkillPerks.CanDigNearlyImpenetrable);
+			}
+			requiredSkillPerk = Db.Get().SkillPerks.CanDigNearlyImpenetrable.Id;
+			materialDisplay.sharedMaterial = materials[2];
+		}
+		else if (element.hardness >= 50)
+		{
+			bool flag4 = false;
+			foreach (Chore.PreconditionInstance precondition4 in chore.GetPreconditions())
+			{
+				if (precondition4.condition.id == ChorePreconditions.instance.HasSkillPerk.id)
+				{
+					flag4 = true;
+					break;
+				}
+			}
+			if (!flag4)
+			{
+				chore.AddPrecondition(ChorePreconditions.instance.HasSkillPerk, Db.Get().SkillPerks.CanDigVeryFirm);
+			}
+			requiredSkillPerk = Db.Get().SkillPerks.CanDigVeryFirm.Id;
+			materialDisplay.sharedMaterial = materials[1];
+		}
+		else
+		{
+			requiredSkillPerk = null;
+			List<Chore.PreconditionInstance> preconditions = chore.GetPreconditions();
+			for (int num2 = preconditions.Count - 1; num2 >= 0; num2--)
+			{
+				if (preconditions[num2].condition.id == ChorePreconditions.instance.HasSkillPerk.id)
+				{
+					preconditions.RemoveAtSwap(num2);
+				}
+			}
+		}
+		UpdateColor(isReachable);
+		UpdateStatusItem();
+		bool flag5 = false;
+		if (WillDigTile())
+		{
+			num = GetUnstableCellAbove(cached_cell);
+			if (!Grid.Solid[cached_cell] && num == -1)
+			{
+				digTypeFlags &= -2;
+				if (!WillDigBackwall() || !BackwallManager.HasBackwall(cached_cell))
+				{
+					flag5 = true;
+				}
+			}
+			else if (num != -1)
+			{
+				StartCoroutine("PeriodicUnstableFallingRecheck");
+			}
+		}
+		else if (WillDigBackwall() && !BackwallManager.HasBackwall(cached_cell))
+		{
+			flag5 = true;
+		}
+		else if (Grid.Foundation[cached_cell])
+		{
+			flag5 = true;
+		}
+		if (WillDigBackwall() && !BackwallManager.HasBackwall(cached_cell))
+		{
+			digTypeFlags &= -3;
+			flag5 |= !WillDigTile();
+		}
+		if (flag5)
+		{
+			isDigComplete = true;
+			if (chore == null || !chore.InProgress())
+			{
+				Util.KDestroyGameObject(base.gameObject);
+			}
+			else
+			{
+				GetComponentInChildren<MeshRenderer>().enabled = false;
+			}
+		}
+		else if (num != -1)
+		{
+			Extents extents = default(Extents);
+			Grid.CellToXY(cached_cell, out extents.x, out extents.y);
+			extents.width = 1;
+			extents.height = (num - cached_cell + Grid.WidthInCells - 1) / Grid.WidthInCells + 1;
+			unstableEntry = GameScenePartitioner.Instance.Add("Diggable.OnSolidChanged", base.gameObject, extents, GameScenePartitioner.Instance.solidChangedLayer, OnSolidChanged);
+		}
+	}
+
+	public Element GetTargetElement()
+	{
+		if (!WillDigTile() && WillDigBackwall() && BackwallManager.HasBackwall(cached_cell))
+		{
+			return BackwallManager.At(cached_cell).Element;
+		}
+		return Grid.Element[cached_cell];
+	}
+
+	public override string GetConversationTopic()
+	{
+		return originalDigElement.tag.Name;
+	}
+
+	protected override bool OnWorkTick(WorkerBase worker, float dt)
+	{
+		if (Grid.Solid[cached_cell] || WillDigBackwall())
+		{
+			DoDigTick(cached_cell, dt);
+		}
+		isDigComplete |= !WillDigTile() && !WillDigBackwall();
+		return isDigComplete;
+	}
+
+	protected override void OnStopWork(WorkerBase worker)
+	{
+		if (isDigComplete)
+		{
+			Util.KDestroyGameObject(base.gameObject);
+		}
+	}
+
+	public override bool InstantlyFinish(WorkerBase worker)
+	{
+		if (Grid.Element[cached_cell].hardness == byte.MaxValue)
+		{
+			return false;
+		}
+		float approximateDigTime = GetApproximateDigTime(cached_cell);
+		worker.Work(approximateDigTime);
+		return true;
+	}
+
+	public static void DoDigTick(int cell, float dt)
+	{
+		DoDigTick(cell, dt, WorldDamage.DamageType.Absolute);
+	}
+
+	public static void DoDigTick(int cell, float dt, WorldDamage.DamageType damageType)
+	{
+		float approximateDigTime = GetApproximateDigTime(cell);
+		float amount = dt / approximateDigTime;
+		WorldDamage.Instance.ApplyDamage(cell, amount, -1, damageType);
+	}
+
+	public static float GetApproximateDigTime(int cell)
+	{
+		float a = Grid.Mass[cell];
+		float num = (int)Grid.Element[cell].hardness;
+		if (!Grid.Solid[cell] && BackwallManager.HasBackwall(cell))
+		{
+			num = (int)BackwallManager.At(cell).Element.hardness;
+			a = BackwallManager.At(cell).Mass;
+		}
+		if (num == 255f)
+		{
+			return float.MaxValue;
+		}
+		Element element = ElementLoader.FindElementByHash(SimHashes.Ice);
+		float num2 = num / (float)(int)element.hardness;
+		float num3 = Mathf.Min(a, 400f) / 400f;
+		float num4 = 4f * num3;
+		return num4 + num2 * num4;
+	}
+
+	public static Diggable GetDiggable(int cell)
+	{
+		GameObject gameObject = Grid.Objects[cell, 7];
+		if (gameObject != null)
+		{
+			return gameObject.GetComponent<Diggable>();
+		}
+		return null;
+	}
+
+	public static bool IsDiggable(int cell)
+	{
+		if (Grid.Solid[cell])
+		{
+			return !Grid.Foundation[cell];
+		}
+		return GetUnstableCellAbove(cell) != Grid.InvalidCell;
+	}
+
+	private static int GetUnstableCellAbove(int cell)
+	{
+		Vector2I cellXY = Grid.CellToXY(cell);
+		List<int> cellsContainingFallingAbove = World.Instance.GetComponent<UnstableGroundManager>().GetCellsContainingFallingAbove(cellXY);
+		if (cellsContainingFallingAbove.Contains(cell))
+		{
+			return cell;
+		}
+		byte b = Grid.WorldIdx[cell];
+		int num = Grid.CellAbove(cell);
+		while (Grid.IsValidCell(num) && Grid.WorldIdx[num] == b)
+		{
+			if (Grid.Foundation[num])
+			{
+				return Grid.InvalidCell;
+			}
+			if (Grid.Solid[num])
+			{
+				if (Grid.Element[num].IsUnstable)
+				{
+					return num;
+				}
+				return Grid.InvalidCell;
+			}
+			if (cellsContainingFallingAbove.Contains(num))
+			{
+				return num;
+			}
+			num = Grid.CellAbove(num);
+		}
+		return Grid.InvalidCell;
+	}
+
+	public static bool RequiresTool(Element e)
+	{
+		return false;
+	}
+
+	public static bool Undiggable(Element e)
+	{
+		return e.id == SimHashes.Unobtanium;
+	}
+
+	private void OnReachableChanged(object data)
+	{
+		if (childRenderer == null)
+		{
+			childRenderer = GetComponentInChildren<MeshRenderer>();
+		}
+		Material material = childRenderer.material;
+		isReachable = ((Boxed<bool>)data).value;
+		if (material.color == Game.Instance.uiColours.Dig.invalidLocation)
+		{
+			return;
+		}
+		UpdateColor(isReachable);
+		KSelectable component = GetComponent<KSelectable>();
+		if (isReachable)
+		{
+			component.RemoveStatusItem(Db.Get().BuildingStatusItems.DigUnreachable);
+			return;
+		}
+		component.AddStatusItem(Db.Get().BuildingStatusItems.DigUnreachable, this);
+		GameScheduler.Instance.Schedule("Locomotion Tutorial", 2f, delegate
+		{
+			Tutorial.Instance.TutorialMessage(Tutorial.TutorialMessages.TM_Locomotion);
+		});
+	}
+
+	private void UpdateColor(bool reachable)
+	{
+		if (!(childRenderer != null))
+		{
+			return;
+		}
+		Material material = childRenderer.material;
+		if (RequiresTool(Grid.Element[Grid.PosToCell(base.gameObject)]) || Undiggable(Grid.Element[Grid.PosToCell(base.gameObject)]))
+		{
+			material.color = Game.Instance.uiColours.Dig.invalidLocation;
+		}
+		else if (Grid.Element[Grid.PosToCell(base.gameObject)].hardness >= 50)
+		{
+			if (reachable)
+			{
+				material.color = Game.Instance.uiColours.Dig.validLocation;
+			}
+			else
+			{
+				material.color = Game.Instance.uiColours.Dig.unreachable;
+			}
+			multitoolContext = lasersForHardness[1].first;
+			multitoolHitEffectTag = lasersForHardness[1].second;
+		}
+		else
+		{
+			if (reachable)
+			{
+				material.color = Game.Instance.uiColours.Dig.validLocation;
+			}
+			else
+			{
+				material.color = Game.Instance.uiColours.Dig.unreachable;
+			}
+			multitoolContext = lasersForHardness[0].first;
+			multitoolHitEffectTag = lasersForHardness[0].second;
+		}
+	}
+
+	public override float GetPercentComplete()
+	{
+		return Grid.Damage[Grid.PosToCell(this)];
+	}
+
+	protected override void OnCleanUp()
+	{
+		base.OnCleanUp();
+		GameScenePartitioner.Instance.Free(ref backwallEntry);
+		GameScenePartitioner.Instance.Free(ref partitionerEntry);
+		GameScenePartitioner.Instance.Free(ref unstableEntry);
+		Game.Instance.Unsubscribe(ref handle);
+		int cell = Grid.PosToCell(this);
+		GameScenePartitioner.Instance.TriggerEvent(cell, GameScenePartitioner.Instance.digDestroyedLayer, null);
+		Components.Diggables.Remove(this);
+	}
+
+	private void OnCancel()
+	{
+		if (DetailsScreen.Instance != null)
+		{
+			DetailsScreen.Instance.Show(show: false);
+		}
+		base.gameObject.Trigger(2127324410);
+	}
+
+	private void OnRefreshUserMenu(object data)
+	{
+		Game.Instance.userMenu.AddButton(base.gameObject, new KIconButtonMenu.ButtonInfo("icon_cancel", UI.USERMENUACTIONS.CANCELDIG.NAME, OnCancel, Action.NumActions, null, null, null, UI.USERMENUACTIONS.CANCELDIG.TOOLTIP));
+	}
+}

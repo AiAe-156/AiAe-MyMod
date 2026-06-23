@@ -1,0 +1,53 @@
+using System;
+using Database;
+
+public class ClothingItemInfo : IBlueprintInfo, IHasDlcRestrictions
+{
+	public ClothingOutfitUtility.OutfitType outfitType;
+
+	public PermitCategory category;
+
+	private readonly PermitRarity rarity_;
+
+	private string[] requiredDlcIds;
+
+	private string[] forbiddenDlcIds;
+
+	public string id { get; set; }
+
+	public string name { get; set; }
+
+	public string desc { get; set; }
+
+	public PermitRarity rarity => rarity_;
+
+	public string animFile { get; set; }
+
+	public ClothingItemInfo(string id, string name, string desc, PermitCategory category, PermitRarity rarity, string animFile, string[] requiredDlcIds = null, string[] forbiddenDlcIds = null)
+	{
+		Option<ClothingOutfitUtility.OutfitType> outfitTypeFor = PermitCategories.GetOutfitTypeFor(category);
+		if (outfitTypeFor.IsNone())
+		{
+			throw new Exception(string.Format("Expected permit category {0} on ClothingItemResource \"{1}\" to have an {2} but none found.", category, id, "OutfitType"));
+		}
+		this.id = id;
+		this.name = name;
+		this.desc = desc;
+		outfitType = outfitTypeFor.Unwrap();
+		this.category = category;
+		rarity_ = rarity;
+		this.animFile = animFile;
+		this.requiredDlcIds = requiredDlcIds;
+		this.forbiddenDlcIds = forbiddenDlcIds;
+	}
+
+	public string[] GetRequiredDlcIds()
+	{
+		return requiredDlcIds;
+	}
+
+	public string[] GetForbiddenDlcIds()
+	{
+		return forbiddenDlcIds;
+	}
+}

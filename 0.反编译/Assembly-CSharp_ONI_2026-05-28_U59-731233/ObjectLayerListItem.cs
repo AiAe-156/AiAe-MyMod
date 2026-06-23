@@ -1,0 +1,73 @@
+using UnityEngine;
+
+public class ObjectLayerListItem
+{
+	private int cell = Grid.InvalidCell;
+
+	private ObjectLayer layer;
+
+	public ObjectLayerListItem previousItem { get; private set; }
+
+	public ObjectLayerListItem nextItem { get; private set; }
+
+	public GameObject gameObject { get; private set; }
+
+	public Pickupable pickupable { get; private set; }
+
+	public ObjectLayerListItem(GameObject gameObject, Pickupable pickupable, ObjectLayer layer, int new_cell)
+	{
+		this.gameObject = gameObject;
+		this.pickupable = pickupable;
+		this.layer = layer;
+		Refresh(new_cell);
+	}
+
+	public void Clear()
+	{
+		Refresh(Grid.InvalidCell);
+	}
+
+	public bool Refresh(int new_cell)
+	{
+		if (cell != new_cell)
+		{
+			if (cell != Grid.InvalidCell && Grid.Objects[cell, (int)layer] == this.gameObject)
+			{
+				GameObject value = null;
+				if (nextItem != null && nextItem.gameObject != null)
+				{
+					value = nextItem.gameObject;
+				}
+				Grid.Objects[cell, (int)layer] = value;
+			}
+			if (previousItem != null)
+			{
+				previousItem.nextItem = nextItem;
+			}
+			if (nextItem != null)
+			{
+				nextItem.previousItem = previousItem;
+			}
+			previousItem = null;
+			nextItem = null;
+			cell = new_cell;
+			if (cell != Grid.InvalidCell)
+			{
+				GameObject gameObject = Grid.Objects[cell, (int)layer];
+				if (gameObject != null && gameObject != this.gameObject)
+				{
+					ObjectLayerListItem objectLayerListItem = (nextItem = gameObject.GetComponent<Pickupable>().objectLayerListItem);
+					objectLayerListItem.previousItem = this;
+				}
+				Grid.Objects[cell, (int)layer] = this.gameObject;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	public bool Update(int cell)
+	{
+		return Refresh(cell);
+	}
+}

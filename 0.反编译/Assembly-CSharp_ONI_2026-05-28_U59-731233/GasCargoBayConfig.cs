@@ -1,0 +1,56 @@
+using STRINGS;
+using TUNING;
+using UnityEngine;
+
+public class GasCargoBayConfig : IBuildingConfig
+{
+	public const string ID = "GasCargoBay";
+
+	public override string[] GetForbiddenDlcIds()
+	{
+		return DlcManager.EXPANSION1;
+	}
+
+	public override BuildingDef CreateBuildingDef()
+	{
+		BuildingDef buildingDef = BuildingTemplates.CreateBuildingDef("GasCargoBay", 5, 5, "rocket_storage_gas_kanim", 1000, 60f, TUNING.BUILDINGS.ROCKETRY_MASS_KG.CARGO_MASS, new string[1] { SimHashes.Steel.ToString() }, 9999f, BuildLocationRule.BuildingAttachPoint, noise: NOISE_POLLUTION.NOISY.TIER2, decor: TUNING.BUILDINGS.DECOR.NONE);
+		BuildingTemplates.CreateRocketBuildingDef(buildingDef);
+		buildingDef.SceneLayer = Grid.SceneLayer.BuildingFront;
+		buildingDef.OverheatTemperature = 2273.15f;
+		buildingDef.Floodable = false;
+		buildingDef.AttachmentSlotTag = GameTags.Rocket;
+		buildingDef.ObjectLayer = ObjectLayer.Building;
+		buildingDef.OutputConduitType = ConduitType.Gas;
+		buildingDef.UtilityOutputOffset = new CellOffset(0, 3);
+		buildingDef.RequiresPowerInput = false;
+		buildingDef.attachablePosition = new CellOffset(0, 0);
+		buildingDef.CanMove = true;
+		buildingDef.AddSearchTerms(SEARCH_TERMS.TRANSPORT);
+		return buildingDef;
+	}
+
+	public override void ConfigureBuildingTemplate(GameObject go, Tag prefab_tag)
+	{
+		BuildingConfigManager.Instance.IgnoreDefaultKComponent(typeof(RequiresFoundation), prefab_tag);
+		go.AddOrGet<LoopingSounds>();
+		go.GetComponent<KPrefabID>().AddTag(RoomConstraints.ConstraintTags.IndustrialMachinery);
+		BuildingAttachPoint buildingAttachPoint = go.AddOrGet<BuildingAttachPoint>();
+		buildingAttachPoint.points = new BuildingAttachPoint.HardPoint[1]
+		{
+			new BuildingAttachPoint.HardPoint(new CellOffset(0, 5), GameTags.Rocket, null)
+		};
+	}
+
+	public override void DoPostConfigureComplete(GameObject go)
+	{
+		CargoBay cargoBay = go.AddOrGet<CargoBay>();
+		cargoBay.storage = go.AddOrGet<Storage>();
+		cargoBay.storageType = CargoBay.CargoType.Gasses;
+		cargoBay.storage.capacityKg = 1000f;
+		cargoBay.storage.SetDefaultStoredItemModifiers(Storage.StandardSealedStorage);
+		ConduitDispenser conduitDispenser = go.AddOrGet<ConduitDispenser>();
+		conduitDispenser.conduitType = ConduitType.Gas;
+		conduitDispenser.storage = cargoBay.storage;
+		BuildingTemplates.ExtendBuildingToRocketModule(go, "rocket_storage_gas_bg_kanim");
+	}
+}

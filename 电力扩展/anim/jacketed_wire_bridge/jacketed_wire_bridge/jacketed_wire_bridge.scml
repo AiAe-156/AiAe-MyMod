@@ -1,0 +1,99 @@
+<spriter_data scml_version="1.0" generator="kanimAL" generator_version="v1">
+  <folder id="0">
+    <file id="0" name="bridge_0.png" width="284" height="100" pivot_x="0.50176054" pivot_y="0.41500002" />
+    <file id="1" name="bridge_place_0.png" width="284" height="100" pivot_x="0.50176054" pivot_y="0.41500002" />
+    <file id="2" name="ui_0.png" width="144" height="108" pivot_x="0.502691" pivot_y="0.43333334" />
+  </folder>
+  <entity id="0" name="jacketed_wire_bridge">
+    <animation id="0" name="off" length="332" interval="83">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+        <key id="1" time="83">
+          <object_ref id="0" timeline="0" key="1" z_index="1" />
+        </key>
+        <key id="2" time="166">
+          <object_ref id="0" timeline="0" key="2" z_index="1" />
+        </key>
+        <key id="3" time="249">
+          <object_ref id="0" timeline="0" key="3" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="bridge_0">
+        <key id="0" time="0">
+          <object folder="0" file="0" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="1" time="83">
+          <object folder="0" file="0" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="2" time="166">
+          <object folder="0" file="0" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="3" time="249">
+          <object folder="0" file="0" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="1" name="place" length="332" interval="83">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+        <key id="1" time="83">
+          <object_ref id="0" timeline="0" key="1" z_index="1" />
+        </key>
+        <key id="2" time="166">
+          <object_ref id="0" timeline="0" key="2" z_index="1" />
+        </key>
+        <key id="3" time="249">
+          <object_ref id="0" timeline="0" key="3" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="bridge_place_0">
+        <key id="0" time="0">
+          <object folder="0" file="1" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="1" time="83">
+          <object folder="0" file="1" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="2" time="166">
+          <object folder="0" file="1" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="3" time="249">
+          <object folder="0" file="1" x="0" y="50.375" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+    <animation id="2" name="ui" length="332" interval="83">
+      <mainline>
+        <key id="0" time="0">
+          <object_ref id="0" timeline="0" key="0" z_index="1" />
+        </key>
+        <key id="1" time="83">
+          <object_ref id="0" timeline="0" key="1" z_index="1" />
+        </key>
+        <key id="2" time="166">
+          <object_ref id="0" timeline="0" key="2" z_index="1" />
+        </key>
+        <key id="3" time="249">
+          <object_ref id="0" timeline="0" key="3" z_index="1" />
+        </key>
+      </mainline>
+      <timeline id="0" name="ui_0">
+        <key id="0" time="0">
+          <object folder="0" file="2" x="2" y="40.875" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="1" time="83">
+          <object folder="0" file="2" x="2" y="40.875" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="2" time="166">
+          <object folder="0" file="2" x="2" y="40.875" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+        <key id="3" time="249">
+          <object folder="0" file="2" x="2" y="40.875" angle="0" scale_x="1" scale_y="1" a="1" />
+        </key>
+      </timeline>
+    </animation>
+  </entity>
+</spriter_data>

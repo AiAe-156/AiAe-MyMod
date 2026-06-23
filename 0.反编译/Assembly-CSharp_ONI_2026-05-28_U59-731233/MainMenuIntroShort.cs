@@ -1,0 +1,30 @@
+using System;
+using UnityEngine;
+
+[AddComponentMenu("KMonoBehaviour/scripts/MainMenuIntroShort")]
+public class MainMenuIntroShort : KMonoBehaviour
+{
+	[SerializeField]
+	private bool alwaysPlay = false;
+
+	protected override void OnSpawn()
+	{
+		base.OnSpawn();
+		string text = KPlayerPrefs.GetString("PlayShortOnLaunch", "");
+		if (!string.IsNullOrEmpty(MainMenu.Instance.IntroShortName) && text != MainMenu.Instance.IntroShortName)
+		{
+			GameObject gameObject = KScreenManager.AddChild(FrontEndManager.Instance.gameObject, ScreenPrefabs.Instance.VideoScreen.gameObject);
+			VideoScreen component = gameObject.GetComponent<VideoScreen>();
+			component.PlayVideo(Assets.GetVideo(MainMenu.Instance.IntroShortName), unskippable: false, AudioMixerSnapshots.Get().MainMenuVideoPlayingSnapshot);
+			component.OnStop = (System.Action)Delegate.Combine(component.OnStop, (System.Action)delegate
+			{
+				KPlayerPrefs.SetString("PlayShortOnLaunch", MainMenu.Instance.IntroShortName);
+				base.gameObject.SetActive(value: false);
+			});
+		}
+		else
+		{
+			base.gameObject.SetActive(value: false);
+		}
+	}
+}

@@ -1,0 +1,13 @@
+title: "径向菜单 中文补丁 (Radial Menu ZH)"
+description: "为创意工坊 mod [b]Radial Menu[/b]（径向菜单）提供简体中文显示。
+
+[b]特点[/b]
+[list]
+[*] 独立补丁，[b]不修改[/b] Radial Menu 原 mod；原 mod 更新（替换其自身 dll）后本补丁仍然可用。
+[*] 仅在[b]显示层[/b]翻译菜单文字与键位名，不改动任何功能、图标或导航逻辑。
+[*] 术语对齐 Klei 官方简体中文（按工具/概览/建造分类的上下文分别取词）。
+[*] 若 Radial Menu 内部结构在未来更新中发生变化导致无法挂载，本补丁会安静跳过并记录日志，[b]绝不影响游戏运行[/b]。
+[/list]
+
+[b]使用[/b]：与 Radial Menu 同时启用即可。建议把本补丁放在 Radial Menu 之后加载（不强制）。"
+staticID: RadialMenuZH

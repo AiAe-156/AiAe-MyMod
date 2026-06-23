@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>TrueTiles</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="ILRepack.List" />
+    <EmbeddedResource Include="ILRepack.List" LogicalName="ILRepack.List" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" />
+    <Reference Include="0Harmony" />
+    <Reference Include="Assembly-CSharp-firstpass" />
+    <Reference Include="Newtonsoft.Json" />
+    <Reference Include="UnityEngine.CoreModule" />
+    <Reference Include="UnityEngine.AssetBundleModule" />
+    <Reference Include="UnityEngine.UI" />
+    <Reference Include="Unity.TextMeshPro" />
+    <Reference Include="UnityEngine.UIModule" />
+    <Reference Include="UnityEngine.ImageConversionModule" />
+    <Reference Include="FMODUnity" />
+    <Reference Include="UnityEngine.TextRenderingModule" />
+  </ItemGroup>
+</Project>

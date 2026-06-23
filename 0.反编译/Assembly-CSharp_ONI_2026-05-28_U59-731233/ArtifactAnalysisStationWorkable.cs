@@ -1,0 +1,156 @@
+using KSerialization;
+using TUNING;
+using UnityEngine;
+
+public class ArtifactAnalysisStationWorkable : Workable
+{
+	[MyCmpAdd]
+	public Notifier notifier;
+
+	[MyCmpReq]
+	public Storage storage;
+
+	[SerializeField]
+	public Vector3 finishedArtifactDropOffset;
+
+	private Notification notification;
+
+	public ArtifactAnalysisStation.StatesInstance statesInstance;
+
+	private KBatchedAnimController animController;
+
+	[Serialize]
+	private float nextYeildRoll = -1f;
+
+	protected override void OnPrefabInit()
+	{
+		base.OnPrefabInit();
+		requiredSkillPerk = Db.Get().SkillPerks.CanStudyArtifact.Id;
+		workerStatusItem = Db.Get().DuplicantStatusItems.AnalyzingArtifact;
+		attributeConverter = Db.Get().AttributeConverters.ArtSpeed;
+		attributeExperienceMultiplier = DUPLICANTSTATS.ATTRIBUTE_LEVELING.PART_DAY_EXPERIENCE;
+		skillExperienceSkillGroup = Db.Get().SkillGroups.Research.Id;
+		skillExperienceMultiplier = SKILLS.PART_DAY_EXPERIENCE;
+		overrideAnims = new KAnimFile[1] { Assets.GetAnim("anim_interacts_artifact_analysis_kanim") };
+		SetWorkTime(150f);
+		showProgressBar = true;
+		lightEfficiencyBonus = true;
+		Components.ArtifactAnalysisStations.Add(this);
+	}
+
+	protected override void OnSpawn()
+	{
+		base.OnSpawn();
+		animController = GetComponent<KBatchedAnimController>();
+		animController.SetSymbolVisiblity("snapTo_artifact", is_visible: false);
+	}
+
+	protected override void OnCleanUp()
+	{
+		base.OnCleanUp();
+		Components.ArtifactAnalysisStations.Remove(this);
+	}
+
+	protected override void OnStartWork(WorkerBase worker)
+	{
+		base.OnStartWork(worker);
+		InitialDisplayStoredArtifact();
+	}
+
+	protected override bool OnWorkTick(WorkerBase worker, float dt)
+	{
+		PositionArtifact();
+		return base.OnWorkTick(worker, dt);
+	}
+
+	private void InitialDisplayStoredArtifact()
+	{
+		Storage component = GetComponent<Storage>();
+		GameObject gameObject = component.GetItems()[0];
+		KBatchedAnimController component2 = gameObject.GetComponent<KBatchedAnimController>();
+		if (component2 != null)
+		{
+			component2.GetBatchInstanceData().ClearOverrideTransformMatrix();
+		}
+		gameObject.transform.SetPosition(new Vector3(base.transform.position.x, base.transform.position.y, Grid.GetLayerZ(Grid.SceneLayer.BuildingBack)));
+		gameObject.SetActive(value: true);
+		component2.enabled = false;
+		component2.enabled = true;
+		PositionArtifact();
+		KSelectable component3 = GetComponent<KSelectable>();
+		component3.AddStatusItem(Db.Get().BuildingStatusItems.ArtifactAnalysisAnalyzing, gameObject);
+	}
+
+	private void ReleaseStoredArtifact()
+	{
+		Storage component = GetComponent<Storage>();
+		GameObject gameObject = component.GetItems()[0];
+		KBatchedAnimController component2 = gameObject.GetComponent<KBatchedAnimController>();
+		gameObject.transform.SetPosition(new Vector3(gameObject.transform.position.x, gameObject.transform.position.y, Grid.GetLayerZ(Grid.SceneLayer.Ore)));
+		component2.enabled = false;
+		component2.enabled = true;
+		component.Drop(gameObject);
+		KSelectable component3 = GetComponent<KSelectable>();
+		component3.RemoveStatusItem(Db.Get().BuildingStatusItems.ArtifactAnalysisAnalyzing, gameObject);
+	}
+
+	private void PositionArtifact()
+	{
+		Storage component = GetComponent<Storage>();
+		GameObject gameObject = component.GetItems()[0];
+		bool symbolVisible;
+		Vector4 column = animController.GetSymbolTransform("snapTo_artifact", out symbolVisible).GetColumn(3);
+		Vector3 position = column;
+		position.z = Grid.GetLayerZ(Grid.SceneLayer.BuildingBack);
+		gameObject.transform.SetPosition(position);
+	}
+
+	protected override void OnCompleteWork(WorkerBase worker)
+	{
+		base.OnCompleteWork(worker);
+		ConsumeCharm();
+		ReleaseStoredArtifact();
+	}
+
+	private void ConsumeCharm()
+	{
+		GameObject gameObject = storage.FindFirst(GameTags.CharmedArtifact);
+		DebugUtil.DevAssertArgs(gameObject != null, "ArtifactAnalysisStation finished studying a charmed artifact but there is not one in its storage");
+		if (gameObject != null)
+		{
+			YieldPayload(gameObject.GetComponent<SpaceArtifact>());
+			gameObject.GetComponent<SpaceArtifact>().RemoveCharm();
+		}
+		if (ArtifactSelector.Instance.RecordArtifactAnalyzed(gameObject.GetComponent<KPrefabID>().PrefabID().ToString()))
+		{
+			if (gameObject.HasTag(GameTags.TerrestrialArtifact))
+			{
+				ArtifactSelector.Instance.IncrementAnalyzedTerrestrialArtifacts();
+			}
+			else
+			{
+				ArtifactSelector.Instance.IncrementAnalyzedSpaceArtifacts();
+			}
+		}
+	}
+
+	private void YieldPayload(SpaceArtifact artifact)
+	{
+		if (nextYeildRoll == -1f)
+		{
+			nextYeildRoll = Random.Range(0f, 1f);
+		}
+		if (nextYeildRoll <= artifact.GetArtifactTier().payloadDropChance)
+		{
+			GameObject gameObject = GameUtil.KInstantiate(Assets.GetPrefab("GeneShufflerRecharge"), statesInstance.master.transform.position + finishedArtifactDropOffset, Grid.SceneLayer.Ore);
+			gameObject.SetActive(value: true);
+		}
+		int num = Mathf.FloorToInt(artifact.GetArtifactTier().payloadDropChance * 20f);
+		for (int i = 0; i < num; i++)
+		{
+			GameObject gameObject2 = GameUtil.KInstantiate(Assets.GetPrefab("OrbitalResearchDatabank"), statesInstance.master.transform.position + finishedArtifactDropOffset, Grid.SceneLayer.Ore);
+			gameObject2.SetActive(value: true);
+		}
+		nextYeildRoll = Random.Range(0f, 1f);
+	}
+}

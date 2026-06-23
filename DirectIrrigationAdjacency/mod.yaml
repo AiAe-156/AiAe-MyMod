@@ -1,0 +1,3 @@
+title: 'Direct Irrigation Adjacency'
+description: 'Extends Direct Irrigation so planted crops can draw water and fertilizer from adjacent cells and nearby planter storages.'
+staticID: aiae.DirectIrrigationAdjacency

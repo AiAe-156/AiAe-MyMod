@@ -1,0 +1,105 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using STRINGS;
+using UnityEngine;
+
+[AddComponentMenu("KMonoBehaviour/scripts/Trappable")]
+public class Trappable : KMonoBehaviour, IGameObjectEffectDescriptor
+{
+	private bool registered;
+
+	private ulong cellChangedHandlerID;
+
+	private static readonly Action<object> OnCellChangedDispatcher = delegate(object obj)
+	{
+		Unsafe.As<Trappable>(obj).OnCellChange();
+	};
+
+	private static readonly EventSystem.IntraObjectHandler<Trappable> OnStoreDelegate = new EventSystem.IntraObjectHandler<Trappable>(delegate(Trappable component, object data)
+	{
+		component.OnStore(data);
+	});
+
+	protected override void OnSpawn()
+	{
+		base.OnSpawn();
+		Register();
+		OnCellChange();
+	}
+
+	protected override void OnCleanUp()
+	{
+		Unregister();
+		base.OnCleanUp();
+	}
+
+	private void OnCellChange()
+	{
+		int cell = Grid.PosToCell(this);
+		GameScenePartitioner.Instance.TriggerEvent(cell, GameScenePartitioner.Instance.trapsLayer, this);
+	}
+
+	protected override void OnCmpEnable()
+	{
+		base.OnCmpEnable();
+		Register();
+	}
+
+	protected override void OnCmpDisable()
+	{
+		Unregister();
+		base.OnCmpDisable();
+	}
+
+	private void Register()
+	{
+		if (!registered)
+		{
+			Subscribe(856640610, OnStoreDelegate);
+			cellChangedHandlerID = Singleton<CellChangeMonitor>.Instance.RegisterCellChangedHandler(base.transform, OnCellChangedDispatcher, this, "Trappable.Register");
+			registered = true;
+		}
+	}
+
+	private void Unregister()
+	{
+		if (registered)
+		{
+			Unsubscribe(856640610, OnStoreDelegate);
+			Singleton<CellChangeMonitor>.Instance.UnregisterCellChangedHandler(ref cellChangedHandlerID);
+			registered = false;
+		}
+	}
+
+	public List<Descriptor> GetDescriptors(GameObject go)
+	{
+		return new List<Descriptor>
+		{
+			new Descriptor(UI.BUILDINGEFFECTS.CAPTURE_METHOD_LAND_TRAP, UI.BUILDINGEFFECTS.TOOLTIPS.CAPTURE_METHOD_TRAP)
+		};
+	}
+
+	public void OnStore(object data)
+	{
+		Storage storage = data as Storage;
+		if ((bool)storage && (storage.GetComponent<Trap>() != null || storage.GetSMI<ReusableTrap.Instance>() != null))
+		{
+			base.gameObject.AddTag(GameTags.Trapped);
+			Navigator component = base.gameObject.GetComponent<Navigator>();
+			if (component != null)
+			{
+				component.Stop();
+			}
+			Brain component2 = base.gameObject.GetComponent<Brain>();
+			if (component2 != null)
+			{
+				Game.BrainScheduler.PrioritizeBrain(component2);
+			}
+		}
+		else
+		{
+			base.gameObject.RemoveTag(GameTags.Trapped);
+		}
+	}
+}

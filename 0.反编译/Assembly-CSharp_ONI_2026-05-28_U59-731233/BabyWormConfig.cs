@@ -1,0 +1,33 @@
+using STRINGS;
+using UnityEngine;
+
+[EntityConfigOrder(3)]
+public class BabyWormConfig : IEntityConfig, IHasDlcRestrictions
+{
+	public const string ID = "DivergentWormBaby";
+
+	public string[] GetRequiredDlcIds()
+	{
+		return DlcManager.EXPANSION1;
+	}
+
+	public string[] GetForbiddenDlcIds()
+	{
+		return null;
+	}
+
+	public GameObject CreatePrefab()
+	{
+		GameObject gameObject = DivergentWormConfig.CreateWorm("DivergentWormBaby", CREATURES.SPECIES.DIVERGENT.VARIANT_WORM.BABY.NAME, CREATURES.SPECIES.DIVERGENT.VARIANT_WORM.BABY.DESC, "baby_worm_kanim", is_baby: true);
+		EntityTemplates.ExtendEntityToBeingABaby(gameObject, "DivergentWorm");
+		return gameObject;
+	}
+
+	public void OnPrefabInit(GameObject prefab)
+	{
+	}
+
+	public void OnSpawn(GameObject inst)
+	{
+	}
+}
