@@ -8,11 +8,9 @@ namespace PowerExtension
 
         protected override string GetID() => ID;
 
-        public override string[] GetRequiredDlcIds()
-        {
-            // 需要 Aquatic DLC (DLC5) 提供橡胶原材料
-            return DlcManager.DLC5;
-        }
+        // [2026-06-25] 不再硬性要求任何 DLC：材料类别 RUBBER_OR_PLASTIC("Rubber&Plastic")
+        // 会自动按可用元素降级——未开水生包时仅塑料(聚丙烯)可建，开了水生包则橡胶也作为候选。
+        // 与原版 WireRubberConfig 一致(其同样不覆写 GetRequiredDlcIds，默认返回 null=无门槛)。
 
         public override BuildingDef CreateBuildingDef()
         {
