@@ -101,8 +101,23 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- 方案A：编译后把 dll 自动拷贝到本地模组目录(用 MSBuild Copy 任务，原生支持中文路径) -->
+  <!-- 方案A：编译后同步到本地模组目录(MSBuild Copy 原生支持中文路径) -->
   <Target Name="CopyToLocalMods" AfterTargets="Build">
+    <ItemGroup>
+      <_ModManifest Include="$(MSBuildProjectDirectory)\mod.yaml;$(MSBuildProjectDirectory)\mod_info.yaml" />
+      <_ModWireAnim Include="$(MSBuildProjectDirectory)\anim\assets\MediumWire\*" />
+      <_ModBridgeAnim Include="$(MSBuildProjectDirectory)\anim\assets\MediumWireBridge\*" />
+      <_ModXfmrAnim Include="$(MSBuildProjectDirectory)\anim\assets\transformer_Medium\*" />
+    </ItemGroup>
+    <!-- 1) 编译产物 DLL -->
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(LocalModDir)" SkipUnchangedFiles="false" />
+    <!-- 2) 清单文件(title/staticID/version/supportedContent) -->
+    <Copy SourceFiles="@(_ModManifest)" DestinationFolder="$(LocalModDir)" SkipUnchangedFiles="false" />
+    <!-- 3) 本 mod 自有的自定义 kanim(高压导线/导线桥/中级变压器)。
+         注:vanilla 改色覆盖图(batterylg/electrobank_huge)的构建产物只存在于已部署目录,
+         其 kanim 导出仍是手工步骤,这里不纳入自动同步,以免覆盖/污染那两份贴图。 -->
+    <Copy SourceFiles="@(_ModWireAnim)" DestinationFolder="$(LocalModDir)\anim\assets\MediumWire" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ModBridgeAnim)" DestinationFolder="$(LocalModDir)\anim\assets\MediumWireBridge" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ModXfmrAnim)" DestinationFolder="$(LocalModDir)\anim\assets\transformer_Medium" SkipUnchangedFiles="true" />
   </Target>
 </Project>
